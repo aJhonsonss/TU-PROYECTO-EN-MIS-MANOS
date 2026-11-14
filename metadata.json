@@ -1,0 +1,6 @@
+{
+  "name": "Monteblanco — Arquitectura & Construcción en Parcelas",
+  "description": "Constructora chilena especializada en casas estilo mediterráneo moderno en parcelas, quinchos integrados y piscinas de hormigón. Experiencia 3D interactiva.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
