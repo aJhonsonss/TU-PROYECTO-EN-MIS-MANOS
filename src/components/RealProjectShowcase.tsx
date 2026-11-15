@@ -17,7 +17,7 @@ import {
   REAL_PROJECT_STORY_SLIDES,
   REAL_PROJECT_COMPARISONS,
 } from '../data/projectData';
-import { RevealBlock, SpotlightCard } from './MotionPrimitives';
+import { RevealBlock } from './MotionPrimitives';
 
 interface RealProjectShowcaseProps {
   onScheduleClick: () => void;
@@ -28,38 +28,49 @@ const STORY_DURATION_MS = 5000;
 export default function RealProjectShowcase({ onScheduleClick }: RealProjectShowcaseProps) {
   const [activeMode, setActiveMode] = useState<'story' | 'finished'>('story');
   const [slideIndex, setSlideIndex] = useState(0);
+  const [baseSlideIndex, setBaseSlideIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
-  const [direction, setDirection] = useState<1 | -1>(1);
 
-  // Finished project comparator & hotspot state
-  // splitPercent controls how much of the LEFT finished view ("Proyecto Terminado") is revealed (default 88% finished first!)
-  const [comparisonId, setComparisonId] = useState<'exterior' | 'interior'>('exterior');
-  const [splitPercent, setSplitPercent] = useState(88);
-  const [activeHotspotId, setActiveHotspotId] = useState<string>('ext-2');
-  const [showFloatingPopover, setShowFloatingPopover] = useState(true);
+  // Finished project curtain split comparator state
+  const [splitPercent, setSplitPercent] = useState(50);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const compareRef = useRef<HTMLDivElement | null>(null);
   const draggingSplitRef = useRef(false);
+  const prevSlideRef = useRef(0);
 
-  const currentSlide = REAL_PROJECT_STORY_SLIDES[slideIndex];
-  const activeComparison =
-    REAL_PROJECT_COMPARISONS.find((c) => c.id === comparisonId) ?? REAL_PROJECT_COMPARISONS[0];
-  const activeHotspot =
-    activeComparison.hotspots.find((h) => h.id === activeHotspotId) ??
-    activeComparison.hotspots[0];
+  const baseSlide = REAL_PROJECT_STORY_SLIDES[baseSlideIndex] ?? REAL_PROJECT_STORY_SLIDES[0];
+  const currentSlide = REAL_PROJECT_STORY_SLIDES[slideIndex] ?? REAL_PROJECT_STORY_SLIDES[0];
+  const activeComparison = REAL_PROJECT_COMPARISONS[0];
 
-  const goToSlide = useCallback(
-    (nextIdx: number, dir?: 1 | -1) => {
-      const normalized =
-        (nextIdx + REAL_PROJECT_STORY_SLIDES.length) % REAL_PROJECT_STORY_SLIDES.length;
-      setDirection(dir ?? (normalized >= slideIndex ? 1 : -1));
-      setSlideIndex(normalized);
-      setProgress(0);
-    },
-    [slideIndex]
-  );
+  // Preload all 9 story slides and finished comparison photos so transitions never flash dark
+  useEffect(() => {
+    REAL_PROJECT_STORY_SLIDES.forEach((s) => {
+      const img = new Image();
+      img.src = s.image;
+    });
+    REAL_PROJECT_COMPARISONS.forEach((c) => {
+      const b = new Image();
+      b.src = c.beforeImage;
+      const a = new Image();
+      a.src = c.afterImage;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (prevSlideRef.current !== slideIndex) {
+      setBaseSlideIndex(prevSlideRef.current);
+      prevSlideRef.current = slideIndex;
+    }
+  }, [slideIndex]);
+
+  const goToSlide = useCallback((nextIdx: number) => {
+    const normalized =
+      (nextIdx + REAL_PROJECT_STORY_SLIDES.length) % REAL_PROJECT_STORY_SLIDES.length;
+    setSlideIndex(normalized);
+    setProgress(0);
+  }, []);
 
   // Story auto-advance timer
   useEffect(() => {
@@ -70,7 +81,6 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
     const interval = window.setInterval(() => {
       setProgress((prev) => {
         if (prev + step >= 100) {
-          setDirection(1);
           setSlideIndex((idx) => (idx + 1) % REAL_PROJECT_STORY_SLIDES.length);
           return 0;
         }
@@ -81,17 +91,13 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
     return () => window.clearInterval(interval);
   }, [activeMode, isPlaying]);
 
-  // Split curtain pointer handling + auto-expand trigger when reaching full finished edge (>= 96%)
+  // Split curtain pointer handling (0% to 100% smooth comparison)
   const updateSplitFromClientX = useCallback((clientX: number) => {
     if (!compareRef.current) return;
     const rect = compareRef.current.getBoundingClientRect();
     const pct = ((clientX - rect.left) / rect.width) * 100;
-    const clamped = Math.max(4, Math.min(98, pct));
+    const clamped = Math.max(0, Math.min(100, pct));
     setSplitPercent(clamped);
-    if (clamped >= 96 && draggingSplitRef.current) {
-      draggingSplitRef.current = false;
-      setIsExpanded(true);
-    }
   }, []);
 
   useEffect(() => {
@@ -120,44 +126,32 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
     return () => window.removeEventListener('keydown', onKey);
   }, [isExpanded]);
 
-  const handleComparisonSwitch = (id: 'exterior' | 'interior') => {
-    setComparisonId(id);
-    const target = REAL_PROJECT_COMPARISONS.find((c) => c.id === id);
-    if (target && target.hotspots[0]) {
-      setActiveHotspotId(target.hotspots[0].id);
-      setShowFloatingPopover(true);
-    }
-    setSplitPercent(88);
-  };
-
   return (
     <section
       id="obra-real"
-      className="py-16 lg:py-22 bg-[#141311] text-[#F6F4EF] border-t border-white/10"
+      className="w-full max-w-full flex-1 overflow-hidden bg-[#141311] text-[#F6F4EF] pt-16 pb-4 lg:pt-[68px] lg:pb-4 flex flex-col justify-center border-t border-white/10"
     >
-      <div className="max-w-[1360px] mx-auto px-6 md:px-10">
-        {/* Section header */}
-        <RevealBlock className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-8 border-b border-white/12">
-          <div className="max-w-3xl">
-            <span className="font-mono-tech text-xs uppercase tracking-[0.22em] text-[#C8A878] block mb-2.5">
+      <div className="max-w-[1360px] w-full max-w-full mx-auto px-4 sm:px-6 md:px-10">
+        {/* Compact Viewport-Fitted Header */}
+        <RevealBlock className="flex flex-col lg:flex-row lg:items-end justify-between gap-3 pb-3 border-b border-white/12">
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium tracking-wide text-[#C8A878]">
               Proyecto Real Ejecutado · Evidencia en Terreno
-            </span>
-            <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-normal tracking-tight text-balance">
+            </p>
+            <h2
+              className="mt-0.5 font-display font-normal leading-[1.06] tracking-tight text-[#F6F4EF]"
+              style={{ fontSize: 'clamp(1.45rem, 2.25vw, 2.1rem)', textWrap: 'balance' }}
+            >
               Casa Pinos del Pacífico: historia real hasta la entrega final.
             </h2>
-            <p className="mt-3 text-sm text-[#B8B0A4] max-w-2xl leading-relaxed">
-              Registro cronológico real de obra en bosque costero —envolvente Rothoblaas, acero
-              micro-nervado negro mate y madera en doble altura— junto al visor interactivo del
-              proyecto terminado y ampliable.
-            </p>
           </div>
 
           {/* Interactive mode switcher */}
-          <div className="inline-flex p-1.5 rounded-2xl bg-white/[0.05] border border-white/12 shrink-0 self-start lg:self-end">
+          <div className="flex flex-wrap sm:inline-flex p-1 rounded-xl bg-white/[0.05] border border-white/12 max-w-full shrink-0 self-start lg:self-auto gap-1">
             <button
               type="button"
               onClick={() => setActiveMode('story')}
-              className={`relative px-4 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-colors flex items-center gap-2 cursor-pointer ${
+              className={`relative px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs font-semibold tracking-wide transition-colors flex items-center gap-1.5 cursor-pointer ${
                 activeMode === 'story' ? 'text-[#141311]' : 'text-[#C5BEB4] hover:text-[#F6F4EF]'
               }`}
             >
@@ -165,10 +159,10 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
                 <motion.span
                   layoutId="realProjectModePill"
                   transition={{ type: 'spring', stiffness: 360, damping: 32 }}
-                  className="absolute inset-0 rounded-xl bg-[#F6F4EF]"
+                  className="absolute inset-0 rounded-lg bg-[#F6F4EF]"
                 />
               )}
-              <span className="relative z-10 flex items-center gap-2">
+              <span className="relative z-10 flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5" />
                 Carrusel de Historia ({REAL_PROJECT_STORY_SLIDES.length})
               </span>
@@ -177,7 +171,7 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
             <button
               type="button"
               onClick={() => setActiveMode('finished')}
-              className={`relative px-4 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-colors flex items-center gap-2 cursor-pointer ${
+              className={`relative px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs font-semibold tracking-wide transition-colors flex items-center gap-1.5 cursor-pointer ${
                 activeMode === 'finished' ? 'text-[#141311]' : 'text-[#C5BEB4] hover:text-[#F6F4EF]'
               }`}
             >
@@ -185,10 +179,10 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
                 <motion.span
                   layoutId="realProjectModePill"
                   transition={{ type: 'spring', stiffness: 360, damping: 32 }}
-                  className="absolute inset-0 rounded-xl bg-[#C8A878]"
+                  className="absolute inset-0 rounded-lg bg-[#C8A878]"
                 />
               )}
-              <span className="relative z-10 flex items-center gap-2">
+              <span className="relative z-10 flex items-center gap-1.5">
                 <Columns2 className="w-3.5 h-3.5" />
                 Proyecto Terminado
               </span>
@@ -201,17 +195,22 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
           {activeMode === 'story' ? (
             <motion.div
               key="mode-story"
-              initial={{ opacity: 0, y: 14 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-7 items-start"
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-3.5 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch w-full max-w-full"
             >
-              {/* Left 7 cols: Modern Story Viewer Frame */}
-              <div className="lg:col-span-7 rounded-3xl overflow-hidden border border-white/12 bg-[#0D0C0B] shadow-2xl">
+              {/* Left 7 cols: Compact Story Viewer Frame (Full Uncropped Photo + Caption Fit In 100vh) */}
+              <div className="lg:col-span-7 min-w-0 w-full max-w-full rounded-2xl overflow-hidden border border-white/12 bg-[#0D0C0B] shadow-2xl flex flex-col">
                 {/* Top Story Progress Bar + Playback Controls */}
-                <div className="px-5 pt-4 pb-3 border-b border-white/10 bg-[#181614]">
-                  <div className="grid grid-cols-9 gap-1.5 mb-3">
+                <div className="px-4 pt-3 pb-2.5 border-b border-white/10 bg-[#181614]">
+                  <div
+                    className="grid gap-1 sm:gap-1.5 mb-2"
+                    style={{
+                      gridTemplateColumns: `repeat(${REAL_PROJECT_STORY_SLIDES.length}, minmax(0, 1fr))`,
+                    }}
+                  >
                     {REAL_PROJECT_STORY_SLIDES.map((s, idx) => {
                       const fillPct =
                         idx < slideIndex ? 100 : idx === slideIndex ? progress : 0;
@@ -234,137 +233,132 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
                     })}
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono-tech text-xs text-[#C8A878] tabular-nums">
-                        CAPÍTULO {currentSlide.chapter} / 0{REAL_PROJECT_STORY_SLIDES.length}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="font-mono-tech text-[11px] text-[#C8A878] tabular-nums shrink-0">
+                        CAPÍTULO {currentSlide.chapter} /{' '}
+                        {String(REAL_PROJECT_STORY_SLIDES.length).padStart(2, '0')}
                       </span>
-                      <span className="text-xs text-[#A39A8E] hidden sm:inline">
+                      <span className="text-[11px] text-[#A39A8E] hidden sm:inline truncate">
                         {currentSlide.phase}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         type="button"
                         onClick={() => setIsPlaying((p) => !p)}
                         aria-label={isPlaying ? 'Pausar historia' : 'Reproducir historia'}
-                        className="px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/12 border border-white/12 text-xs text-[#F6F4EF] flex items-center gap-1.5 transition-colors cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/12 border border-white/12 text-[11px] text-[#F6F4EF] flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
                         {isPlaying ? (
                           <>
-                            <Pause className="w-3.5 h-3.5 text-[#C8A878]" />
+                            <Pause className="w-3 h-3 text-[#C8A878]" />
                             Pausar
                           </>
                         ) : (
                           <>
-                            <Play className="w-3.5 h-3.5 text-[#C8A878]" />
-                            Reproducir
+                            <Play className="w-3 h-3 text-[#C8A878]" />
+                            Reanudar
                           </>
                         )}
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => goToSlide(slideIndex - 1, -1)}
+                        onClick={() => goToSlide(slideIndex - 1)}
                         aria-label="Capítulo anterior"
-                        className="w-8 h-8 rounded-lg bg-white/[0.06] hover:bg-white/12 border border-white/12 flex items-center justify-center text-[#F6F4EF] transition-colors cursor-pointer"
+                        className="w-7 h-7 rounded-lg bg-white/[0.06] hover:bg-white/12 border border-white/12 flex items-center justify-center text-[#F6F4EF] transition-colors cursor-pointer"
                       >
-                        <ChevronLeft className="w-4 h-4" />
+                        <ChevronLeft className="w-3.5 h-3.5" />
                       </button>
                       <button
                         type="button"
-                        onClick={() => goToSlide(slideIndex + 1, 1)}
+                        onClick={() => goToSlide(slideIndex + 1)}
                         aria-label="Siguiente capítulo"
-                        className="w-8 h-8 rounded-lg bg-white/[0.06] hover:bg-white/12 border border-white/12 flex items-center justify-center text-[#F6F4EF] transition-colors cursor-pointer"
+                        className="w-7 h-7 rounded-lg bg-white/[0.06] hover:bg-white/12 border border-white/12 flex items-center justify-center text-[#F6F4EF] transition-colors cursor-pointer"
                       >
-                        <ChevronRight className="w-4 h-4" />
+                        <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Story Viewport */}
-                <div className="relative h-[380px] sm:h-[440px] bg-[#0B0A09] overflow-hidden select-none">
-                  <AnimatePresence mode="wait" custom={direction}>
-                    <motion.div
-                      key={currentSlide.id}
-                      custom={direction}
-                      initial={{ opacity: 0, x: direction * 30, scale: 1.02 }}
-                      animate={{ opacity: 1, x: 0, scale: 1 }}
-                      exit={{ opacity: 0, x: direction * -30, scale: 0.98 }}
-                      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                      drag="x"
-                      dragConstraints={{ left: 0, right: 0 }}
-                      dragElastic={0.2}
-                      onDragEnd={(_, info) => {
-                        if (info.offset.x < -55) goToSlide(slideIndex + 1, 1);
-                        else if (info.offset.x > 55) goToSlide(slideIndex - 1, -1);
-                      }}
-                      className="absolute inset-0 flex items-center justify-center cursor-grab active:cursor-grabbing"
-                    >
-                      <img
-                        src={currentSlide.image}
-                        alt=""
-                        aria-hidden="true"
-                        referrerPolicy="no-referrer"
-                        className="absolute inset-0 w-full h-full object-cover opacity-25 blur-2xl scale-110 pointer-events-none"
-                      />
+                {/* Zero-Dip Cross-Fade Photo Viewport (Full Widescreen object-cover, Zero Slide Overlap) */}
+                <div className="relative h-[240px] sm:h-[290px] lg:h-[clamp(250px,41vh,420px)] bg-[#0B0A09] overflow-hidden select-none">
+                  {/* Steady Base Frame Underneath */}
+                  <img
+                    src={baseSlide.image}
+                    alt=""
+                    aria-hidden="true"
+                    referrerPolicy="no-referrer"
+                    className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
+                  />
 
-                      <motion.img
-                        src={currentSlide.image}
-                        alt={currentSlide.imageAlt}
-                        referrerPolicy="no-referrer"
-                        initial={{ scale: 1 }}
-                        animate={{ scale: isPlaying ? 1.04 : 1 }}
-                        transition={{ duration: 5.0, ease: 'linear' }}
-                        className={`relative z-10 max-h-full max-w-full ${
-                          currentSlide.aspectHint === 'landscape'
-                            ? 'w-full h-full object-cover'
-                            : 'h-full w-auto object-contain rounded-lg shadow-2xl'
-                        }`}
-                      />
-                    </motion.div>
-                  </AnimatePresence>
+                  {/* Smooth Incoming Cross-Fade Layer */}
+                  <motion.div
+                    key={currentSlide.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.2}
+                    onDragEnd={(_, info) => {
+                      if (info.offset.x < -55) goToSlide(slideIndex + 1);
+                      else if (info.offset.x > 55) goToSlide(slideIndex - 1);
+                    }}
+                    className="absolute inset-0 z-10 bg-[#0B0A09] cursor-grab active:cursor-grabbing"
+                  >
+                    <img
+                      src={currentSlide.image}
+                      alt={currentSlide.imageAlt}
+                      referrerPolicy="no-referrer"
+                      draggable={false}
+                      className="w-full h-full object-cover object-center"
+                    />
+                  </motion.div>
 
                   <button
                     type="button"
-                    onClick={() => goToSlide(slideIndex - 1, -1)}
+                    onClick={() => goToSlide(slideIndex - 1)}
                     aria-label="Historia anterior"
-                    className="absolute left-0 top-0 bottom-0 w-1/5 z-20 cursor-pointer focus:outline-none"
+                    className="absolute left-0 top-0 bottom-0 w-1/6 z-20 cursor-pointer focus:outline-none"
                   />
                   <button
                     type="button"
-                    onClick={() => goToSlide(slideIndex + 1, 1)}
+                    onClick={() => goToSlide(slideIndex + 1)}
                     aria-label="Historia siguiente"
-                    className="absolute right-0 top-0 bottom-0 w-1/5 z-20 cursor-pointer focus:outline-none"
+                    className="absolute right-0 top-0 bottom-0 w-1/6 z-20 cursor-pointer focus:outline-none"
                   />
                 </div>
 
-                {/* Bottom Narrative Deck */}
-                <div className="p-6 border-t border-white/10 bg-[#181614]">
-                  <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                    <span className="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#C8A878]">
+                {/* Compact Bottom Narrative Deck (Always 100% Visible) */}
+                <div className="px-4 py-3 border-t border-white/10 bg-[#181614] flex flex-col justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#C8A878] truncate">
                       {currentSlide.technicalNote}
                     </span>
                     {currentSlide.isEnhanced && (
-                      <span className="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#E6C792] flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5" />
-                        Acabado Final Proyectado
+                      <span className="font-mono-tech text-[10px] uppercase tracking-[0.14em] text-[#E6C792] flex items-center gap-1 shrink-0">
+                        <Sparkles className="w-3 h-3" />
+                        Acabado Final
                       </span>
                     )}
                   </div>
 
-                  <h3 className="font-display text-2xl sm:text-3xl font-normal text-[#F6F4EF]">
-                    {currentSlide.title}
-                  </h3>
-                  <p className="mt-2 text-sm text-[#C5BEB4] leading-relaxed">
-                    {currentSlide.caption}
-                  </p>
+                  <div>
+                    <h3 className="font-display text-lg sm:text-xl font-normal text-[#F6F4EF] leading-tight">
+                      {currentSlide.title}
+                    </h3>
+                    <p className="mt-1 text-xs text-[#C5BEB4] leading-relaxed line-clamp-2">
+                      {currentSlide.caption}
+                    </p>
+                  </div>
 
-                  <div className="mt-4 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-4">
-                    <span className="font-mono-tech text-[11px] text-[#8E867B]">
-                      Desliza la foto o elige un capítulo
+                  <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-mono-tech text-[10px] text-[#8E867B]">
+                      Desliza la foto o elige cualquiera de los {REAL_PROJECT_STORY_SLIDES.length} hitos
                     </span>
                     <button
                       type="button"
@@ -378,157 +372,152 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
                 </div>
               </div>
 
-              {/* Right 5 cols: Tracing Timeline Rail */}
-              <div className="lg:col-span-5 relative">
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="font-mono-tech text-[11px] uppercase tracking-[0.18em] text-[#A39A8E]">
-                    Bitácora Cronológica · 9 Hitos Reales
+              {/* Right 5 cols: All 14 Chapters Visible Simultaneously in Balanced 4-Column Grid */}
+              <div className="lg:col-span-5 min-w-0 w-full max-w-full flex flex-col justify-between gap-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#A39A8E]">
+                    Bitácora Cronológica · {REAL_PROJECT_STORY_SLIDES.length} Hitos Reales
                   </span>
                   <span className="font-mono-tech text-[11px] text-[#C8A878] tabular-nums">
                     {Math.round(((slideIndex + 1) / REAL_PROJECT_STORY_SLIDES.length) * 100)}%
                   </span>
                 </div>
 
-                <div className="relative pl-5 space-y-2">
-                  <div
-                    aria-hidden="true"
-                    className="absolute left-[7px] top-3 bottom-3 w-[2px] bg-white/10 rounded-full overflow-hidden"
-                  >
-                    <motion.div
-                      className="w-full bg-gradient-to-b from-[#9E7B4F] to-[#E6C792]"
-                      animate={{
-                        height: `${((slideIndex + 1) / REAL_PROJECT_STORY_SLIDES.length) * 100}%`,
-                      }}
-                      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                    />
-                  </div>
+                {/* Progress Bar Line */}
+                <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-[#9E7B4F] to-[#E6C792]"
+                    animate={{
+                      width: `${((slideIndex + 1) / REAL_PROJECT_STORY_SLIDES.length) * 100}%`,
+                    }}
+                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  />
+                </div>
 
+                {/* Balanced 4-Column Thumbnail Grid — All 13 Chapters Visible Without Scrolling */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 flex-1">
                   {REAL_PROJECT_STORY_SLIDES.map((s, idx) => {
                     const isActive = idx === slideIndex;
+                    const isFinale = idx === REAL_PROJECT_STORY_SLIDES.length - 1;
                     return (
-                      <div key={s.id} className="relative">
-                        <span
-                          className={`absolute -left-5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 transition-colors ${
-                            isActive
-                              ? 'bg-[#C8A878] border-[#141311]'
-                              : idx < slideIndex
-                                ? 'bg-[#9E7B4F]/60 border-[#141311]'
-                                : 'bg-[#252320] border-white/25'
-                          }`}
-                        />
-
-                        <SpotlightCard
-                          spotlightColor="rgba(200, 168, 120, 0.16)"
-                          className={`rounded-2xl border transition-all duration-200 ${
-                            isActive
-                              ? 'bg-[#1F1D1A] border-[#C8A878]/60 shadow-lg'
-                              : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.06] hover:border-white/20'
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => goToSlide(idx)}
+                        className={`group relative rounded-xl overflow-hidden border text-left transition-all duration-200 flex cursor-pointer ${
+                          isFinale
+                            ? 'col-span-2 sm:col-span-4 flex-row items-center min-h-[54px] sm:min-h-[58px]'
+                            : 'flex-col min-h-[72px] sm:min-h-[78px]'
+                        } ${
+                          isActive
+                            ? 'border-[#C8A878] ring-2 ring-[#C8A878]/35 bg-[#1F1D1A] shadow-lg'
+                            : 'border-white/10 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        <div
+                          className={`relative overflow-hidden bg-[#0D0C0B] shrink-0 ${
+                            isFinale ? 'w-24 sm:w-28 h-full min-h-[54px]' : 'h-9 sm:h-11 w-full'
                           }`}
                         >
-                          <button
-                            type="button"
-                            onClick={() => goToSlide(idx)}
-                            className="w-full p-2.5 flex items-center gap-3 text-left cursor-pointer"
+                          <img
+                            src={s.image}
+                            alt={s.title}
+                            referrerPolicy="no-referrer"
+                            className={`w-full h-full object-cover object-center transition-transform duration-300 ${
+                              isActive ? 'scale-105' : 'group-hover:scale-105 opacity-80'
+                            }`}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#141311]/75 via-transparent to-transparent" />
+                          <span
+                            className={`absolute top-1 left-1 px-1.5 py-0.5 rounded font-mono-tech text-[9px] font-bold ${
+                              isActive
+                                ? 'bg-[#C8A878] text-[#141311]'
+                                : 'bg-[#141311]/85 text-[#F6F4EF]'
+                            }`}
                           >
-                            <img
-                              src={s.image}
-                              alt={s.title}
-                              referrerPolicy="no-referrer"
-                              className="w-12 h-12 rounded-xl object-cover shrink-0 border border-white/10"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-2">
-                                <span
-                                  className={`font-mono-tech text-[10px] uppercase tracking-[0.15em] ${
-                                    isActive ? 'text-[#C8A878]' : 'text-[#8E867B]'
-                                  }`}
-                                >
-                                  {s.chapter} · {s.phase}
-                                </span>
-                                {s.isEnhanced && (
-                                  <Sparkles className="w-3 h-3 text-[#C8A878] shrink-0" />
-                                )}
-                              </div>
-                              <p
-                                className={`text-xs sm:text-sm font-medium truncate mt-0.5 ${
-                                  isActive ? 'text-[#F6F4EF]' : 'text-[#C5BEB4]'
-                                }`}
-                              >
-                                {s.title}
-                              </p>
-                            </div>
-                          </button>
-                        </SpotlightCard>
-                      </div>
+                            {s.chapter}
+                          </span>
+                          {s.isEnhanced && (
+                            <Sparkles className="absolute top-1 right-1 w-3 h-3 text-[#C8A878]" />
+                          )}
+                        </div>
+
+                        <div className="px-2.5 py-1.5 flex-1 flex flex-col justify-center min-w-0">
+                          {isFinale && (
+                            <span className="font-mono-tech text-[9px] uppercase tracking-[0.14em] text-[#C8A878] mb-0.5">
+                              Entrega Final
+                            </span>
+                          )}
+                          <p
+                            className={`font-medium leading-tight ${
+                              isFinale ? 'text-[11px] truncate' : 'text-[10px] line-clamp-2'
+                            } ${isActive ? 'text-[#F6F4EF]' : 'text-[#C5BEB4]'}`}
+                          >
+                            {s.title}
+                          </p>
+                        </div>
+                      </button>
                     );
                   })}
                 </div>
+
+                {/* Bottom Action CTA */}
+                <button
+                  type="button"
+                  onClick={onScheduleClick}
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#C8A878] text-[#141311] hover:bg-[#D9BA8A] text-xs font-semibold tracking-wide transition-colors flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                >
+                  Cotizar Proyecto Similar en Tu Parcela
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
             </motion.div>
           ) : (
             <motion.div
               key="mode-finished"
-              initial={{ opacity: 0, y: 14 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-7 items-start"
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-3.5 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch w-full max-w-full"
             >
-              {/* Left 8 cols: Viewport-Fitted Finished Project First + Draggable Split Reveal + Adjacent Pin Card */}
-              <div className="lg:col-span-8 space-y-3.5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="inline-flex p-1 rounded-xl bg-white/[0.05] border border-white/12">
-                    {REAL_PROJECT_COMPARISONS.map((comp) => (
-                      <button
-                        key={comp.id}
-                        type="button"
-                        onClick={() => handleComparisonSwitch(comp.id)}
-                        className={`px-4 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                          comparisonId === comp.id
-                            ? 'bg-[#F6F4EF] text-[#141311] font-semibold'
-                            : 'text-[#C5BEB4] hover:text-[#F6F4EF]'
-                        }`}
-                      >
-                        {comp.label}
-                      </button>
-                    ))}
-                  </div>
+              {/* Left 9 cols: Clean Draggable Curtain Comparator (Image 1 vs Last Image, Zero Pins) */}
+              <div className="lg:col-span-9 min-w-0 w-full max-w-full flex flex-col gap-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-mono-tech text-[11px] uppercase tracking-[0.16em] text-[#C8A878]">
+                    Comparativa Directa · {activeComparison.label}
+                  </span>
 
                   <button
                     type="button"
                     onClick={() => setIsExpanded(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#C8A878] text-[#141311] hover:bg-[#D9BA8A] text-xs font-semibold transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#C8A878] text-[#141311] hover:bg-[#D9BA8A] text-xs font-semibold transition-colors cursor-pointer"
                   >
                     <Maximize2 className="w-3.5 h-3.5" />
                     Expandir vista completa
                   </button>
                 </div>
 
-                {/* Comparison Canvas (Finished Project shown FIRST on Left/Main 88%!) */}
-                <div className="rounded-3xl overflow-hidden border border-white/12 bg-[#0B0A09] shadow-2xl">
+                {/* Comparison Canvas */}
+                <div className="rounded-2xl overflow-hidden border border-white/12 bg-[#0B0A09] shadow-2xl">
                   <div
                     ref={compareRef}
                     onPointerDown={(e) => {
-                      if (
-                        (e.target as HTMLElement).closest('[data-hotspot="true"]') ||
-                        (e.target as HTMLElement).closest('[data-popover="true"]')
-                      ) {
-                        return;
-                      }
                       draggingSplitRef.current = true;
                       updateSplitFromClientX(e.clientX);
                     }}
-                    className="relative w-full h-[380px] sm:h-[450px] overflow-hidden cursor-ew-resize select-none touch-none"
+                    className="relative w-full h-[270px] sm:h-[340px] lg:h-[clamp(300px,46vh,460px)] overflow-hidden cursor-ew-resize select-none touch-none"
                   >
-                    {/* Right / Underneath layer: Raw In-Site Photo */}
+                    {/* Right / Underneath layer: Image 1 (Inicio de Obra) */}
                     <img
                       src={activeComparison.beforeImage}
                       alt={activeComparison.beforeLabel}
                       referrerPolicy="no-referrer"
+                      draggable={false}
                       className="absolute inset-0 w-full h-full object-cover object-center"
                     />
 
-                    {/* Left / Dominant Primary Layer (default 88%): Clean Finished Enhanced Project */}
+                    {/* Left / Clipped Top layer: Last Image (Proyecto Terminado) */}
                     <div
                       className="absolute inset-0 overflow-hidden"
                       style={{ clipPath: `inset(0 ${100 - splitPercent}% 0 0)` }}
@@ -537,9 +526,18 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
                         src={activeComparison.afterImage}
                         alt={activeComparison.afterLabel}
                         referrerPolicy="no-referrer"
+                        draggable={false}
                         className="absolute inset-0 w-full h-full object-cover object-center"
                       />
                     </div>
+
+                    {/* Clean Corner State Labels */}
+                    <span className="pointer-events-none absolute top-3 left-3 z-20 px-2.5 py-1 rounded-lg bg-[#141311]/85 border border-[#C8A878]/50 font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#C8A878]">
+                      {activeComparison.afterLabel}
+                    </span>
+                    <span className="pointer-events-none absolute top-3 right-3 z-20 px-2.5 py-1 rounded-lg bg-[#141311]/85 border border-white/20 font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#F6F4EF]">
+                      {activeComparison.beforeLabel}
+                    </span>
 
                     {/* Vertical Split Handle */}
                     <div
@@ -550,170 +548,65 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
                         <MoveHorizontal className="w-4 h-4 text-[#C8A878]" />
                       </div>
                     </div>
-
-                    {/* Interactive Numbered Hotspot Pins */}
-                    {activeComparison.hotspots.map((spot) => {
-                      const selected = spot.id === activeHotspot.id && showFloatingPopover;
-                      return (
-                        <button
-                          key={spot.id}
-                          type="button"
-                          data-hotspot="true"
-                          onClick={() => {
-                            if (activeHotspotId === spot.id && showFloatingPopover) {
-                              setShowFloatingPopover(false);
-                            } else {
-                              setActiveHotspotId(spot.id);
-                              setShowFloatingPopover(true);
-                              setSplitPercent((prev) => Math.max(prev, Math.min(92, spot.xPercent + 10)));
-                            }
-                          }}
-                          style={{
-                            left: `${spot.xPercent}%`,
-                            top: `${spot.yPercent}%`,
-                          }}
-                          aria-label={`Inspeccionar ${spot.num}: ${spot.title}`}
-                          className={`absolute -translate-x-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full flex items-center justify-center font-mono-tech text-xs font-bold tabular-nums border-2 shadow-xl transition-all duration-200 cursor-pointer ${
-                            selected
-                              ? 'bg-[#C8A878] text-[#141311] border-[#F6F4EF] scale-110 ring-4 ring-[#C8A878]/35'
-                              : 'bg-[#141311] text-[#F6F4EF] border-[#F6F4EF] hover:scale-105 hover:bg-[#C8A878] hover:text-[#141311]'
-                          }`}
-                        >
-                          {spot.num}
-                        </button>
-                      );
-                    })}
-
-                    {/* Floating Adjacent Callout Card Right Next to Clicked Point */}
-                    <AnimatePresence mode="wait">
-                      {showFloatingPopover && (
-                        <motion.div
-                          key={activeHotspot.id}
-                          data-popover="true"
-                          initial={{ opacity: 0, scale: 0.94, y: 6 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.94, y: 4 }}
-                          transition={{ duration: 0.2 }}
-                          style={{
-                            left:
-                              activeHotspot.xPercent > 52
-                                ? `max(12px, calc(${activeHotspot.xPercent}% - 280px))`
-                                : `min(calc(100% - 270px), calc(${activeHotspot.xPercent}% + 26px))`,
-                            top:
-                              activeHotspot.yPercent > 62
-                                ? `max(12px, calc(${activeHotspot.yPercent}% - 125px))`
-                                : `max(12px, calc(${activeHotspot.yPercent}% - 30px))`,
-                          }}
-                          className="absolute z-40 w-[255px] p-4 rounded-2xl bg-[#141311]/95 border border-[#C8A878]/60 shadow-[0_14px_34px_rgba(0,0,0,0.65)] text-left"
-                        >
-                          <div className="flex items-center justify-between gap-2 pb-2 border-b border-white/10">
-                            <span className="font-mono-tech text-[10px] uppercase tracking-[0.16em] text-[#C8A878]">
-                              Detalle 0{activeHotspot.num}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setShowFloatingPopover(false)}
-                              aria-label="Cerrar descripción"
-                              className="w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-[#F6F4EF] cursor-pointer"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                          <h4 className="mt-2 font-display text-lg leading-snug text-[#F6F4EF]">
-                            {activeHotspot.title}
-                          </h4>
-                          <p className="mt-1.5 text-xs text-[#D6D0C6] leading-relaxed">
-                            {activeHotspot.detail}
-                          </p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
                   </div>
                 </div>
 
-                {/* Bottom Split Controls + Auto-Expand Hint */}
-                <div className="px-4 py-3 rounded-2xl bg-white/[0.04] border border-white/10 flex flex-wrap items-center justify-between gap-3">
-                  <span className="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#C8A878]">
+                {/* Bottom Moving Selector Controls */}
+                <div className="px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-mono-tech text-[11px] uppercase tracking-[0.12em] text-[#C8A878]">
                     ← {activeComparison.afterLabel} ({Math.round(splitPercent)}%)
                   </span>
                   <div className="flex items-center gap-3">
                     <input
                       type="range"
-                      min={4}
-                      max={98}
+                      min={0}
+                      max={100}
                       value={Math.round(splitPercent)}
-                      onChange={(e) => {
-                        const val = Number(e.target.value);
-                        setSplitPercent(val);
-                        if (val >= 97) setIsExpanded(true);
-                      }}
-                      aria-label="Deslizador comparador proyecto terminado y obra previa"
-                      className="w-32 sm:w-44 accent-[#C8A878] cursor-pointer"
+                      onChange={(e) => setSplitPercent(Number(e.target.value))}
+                      aria-label="Selector deslizable entre inicio de obra y proyecto terminado"
+                      className="w-36 sm:w-56 accent-[#C8A878] cursor-pointer"
                     />
-                    <span className="hidden sm:inline font-mono-tech text-[10px] text-[#8E867B]">
-                      Lleva al 100% o haz clic para ampliar
-                    </span>
                   </div>
-                  <span className="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#A39A8E]">
+                  <span className="font-mono-tech text-[11px] uppercase tracking-[0.12em] text-[#A39A8E]">
                     {activeComparison.beforeLabel} →
                   </span>
                 </div>
               </div>
 
-              {/* Right 4 cols: Compact Index + CTA (Fits inside same viewport!) */}
-              <div className="lg:col-span-4 space-y-4">
+              {/* Right 3 cols: Clean Summary & CTAs (Zero Hotspots, Zero Living Doble Altura Button) */}
+              <div className="lg:col-span-3 min-w-0 w-full max-w-full flex flex-col justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
                 <div>
-                  <span className="font-mono-tech text-[11px] uppercase tracking-[0.18em] text-[#C8A878]">
-                    Inspección Interactiva
+                  <span className="font-mono-tech text-[10px] uppercase tracking-[0.18em] text-[#C8A878]">
+                    Antes y Después Real
                   </span>
-                  <h3 className="mt-1.5 font-display text-2xl sm:text-3xl font-normal text-[#F6F4EF]">
+                  <h3 className="mt-1.5 font-display text-xl sm:text-2xl font-normal text-[#F6F4EF] leading-tight">
                     {activeComparison.title}
                   </h3>
-                  <p className="mt-2 text-xs sm:text-sm text-[#B8B0A4] leading-relaxed">
-                    Haz clic en cualquier punto numerado sobre la imagen para desplegar su ficha
-                    técnica al costado o amplía la vista completa.
+                  <p className="mt-2.5 text-xs text-[#C5BEB4] leading-relaxed">
+                    {activeComparison.subtitle}
                   </p>
                 </div>
 
-                {/* Compact Hotspot Buttons */}
-                <div className="space-y-2">
-                  {activeComparison.hotspots.map((spot) => {
-                    const isSelected = spot.id === activeHotspot.id && showFloatingPopover;
-                    return (
-                      <button
-                        key={spot.id}
-                        type="button"
-                        onClick={() => {
-                          setActiveHotspotId(spot.id);
-                          setShowFloatingPopover(true);
-                          setSplitPercent((prev) => Math.max(prev, 86));
-                        }}
-                        className={`w-full p-3 rounded-xl border text-left transition-all flex items-center gap-3 cursor-pointer ${
-                          isSelected
-                            ? 'bg-[#F6F4EF] text-[#141311] border-[#F6F4EF]'
-                            : 'bg-white/[0.03] text-[#F6F4EF] border-white/10 hover:bg-white/[0.08]'
-                        }`}
-                      >
-                        <span
-                          className={`w-7 h-7 rounded-full font-mono-tech text-xs font-bold flex items-center justify-center shrink-0 tabular-nums ${
-                            isSelected
-                              ? 'bg-[#141311] text-[#F6F4EF]'
-                              : 'bg-white/10 text-[#C8A878]'
-                          }`}
-                        >
-                          {spot.num}
-                        </span>
-                        <span className="text-xs font-medium">{spot.title}</span>
-                      </button>
-                    );
-                  })}
+                <div className="space-y-2 py-3 border-y border-white/10 text-xs text-[#D6D0C6]">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[#968E83]">Izquierda</span>
+                    <span className="font-medium text-[#C8A878] text-right">
+                      {activeComparison.afterLabel}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[#968E83]">Derecha</span>
+                    <span className="font-medium text-[#F6F4EF] text-right">
+                      {activeComparison.beforeLabel}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="pt-2 flex flex-col gap-2.5">
+                <div className="flex flex-col gap-2.5">
                   <button
                     type="button"
                     onClick={onScheduleClick}
-                    className="w-full px-5 py-3 rounded-xl bg-[#C8A878] text-[#141311] hover:bg-[#D9BA8A] text-xs font-semibold tracking-wide transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#C8A878] text-[#141311] hover:bg-[#D9BA8A] text-xs font-semibold tracking-wide transition-colors flex items-center justify-center gap-2 cursor-pointer"
                   >
                     Cotizar Proyecto Similar en Tu Parcela
                     <ArrowRight className="w-4 h-4" />
@@ -761,31 +654,14 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
                   </h3>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {REAL_PROJECT_COMPARISONS.map((comp) => (
-                    <button
-                      key={comp.id}
-                      type="button"
-                      onClick={() => handleComparisonSwitch(comp.id)}
-                      className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                        comparisonId === comp.id
-                          ? 'bg-[#C8A878] text-[#141311] font-semibold'
-                          : 'bg-white/10 text-[#F6F4EF] hover:bg-white/20'
-                      }`}
-                    >
-                      {comp.label}
-                    </button>
-                  ))}
-
-                  <button
-                    type="button"
-                    onClick={() => setIsExpanded(false)}
-                    aria-label="Cerrar vista ampliada"
-                    className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-[#F6F4EF] cursor-pointer ml-2"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded(false)}
+                  aria-label="Cerrar vista ampliada"
+                  className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-[#F6F4EF] cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
               <div className="relative flex-1 min-h-0 bg-[#0B0A09] flex items-center justify-center p-4 overflow-hidden">

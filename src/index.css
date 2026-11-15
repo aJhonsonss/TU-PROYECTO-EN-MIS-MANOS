@@ -12,10 +12,13 @@
     background-color: #F6F4EF;
     color: #171614;
     scroll-behavior: auto;
+    overflow-x: hidden;
+    max-width: 100%;
   }
 
   body {
     overflow-x: hidden;
+    max-width: 100%;
   }
 }
 

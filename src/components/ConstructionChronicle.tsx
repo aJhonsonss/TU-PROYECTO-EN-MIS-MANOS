@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { MoveHorizontal, SlidersHorizontal, Play, Pause } from 'lucide-react';
 import { CONSTRUCTION_STAGES } from '../data/projectData';
 import { RevealBlock, SpotlightCard } from './MotionPrimitives';
@@ -14,10 +14,16 @@ export default function ConstructionChronicle() {
   const [splitPercent, setSplitPercent] = useState(55);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
 
-  const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
   const compareContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Smooth automatic transparent crossfade carousel through stages when idle
+  useEffect(() => {
+    CONSTRUCTION_STAGES.forEach((stage) => {
+      const img = new Image();
+      img.src = stage.image;
+    });
+  }, []);
+
+  // Smooth automatic transparent crossfade carousel synced 1:1 with the expanded stage card
   useEffect(() => {
     if (viewerMode !== 'timeline' || !autoCycle) return;
     const interval = window.setInterval(() => {
@@ -26,46 +32,14 @@ export default function ConstructionChronicle() {
         setScrubPercent(Math.round(CONSTRUCTION_STAGES[next].progressTarget * 100));
         return next;
       });
-    }, 4200);
+    }, 4400);
     return () => window.clearInterval(interval);
   }, [viewerMode, autoCycle]);
-
-  useEffect(() => {
-    const observers: IntersectionObserver[] = [];
-
-    cardRefs.current.forEach((el, idx) => {
-      if (!el) return;
-      const obs = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting && !autoCycle) {
-              setActiveIndex(idx);
-              setScrubPercent(Math.round(CONSTRUCTION_STAGES[idx].progressTarget * 100));
-            }
-          });
-        },
-        {
-          rootMargin: '-35% 0px -35% 0px',
-          threshold: 0.1,
-        }
-      );
-      obs.observe(el);
-      observers.push(obs);
-    });
-
-    return () => {
-      observers.forEach((o) => o.disconnect());
-    };
-  }, [autoCycle]);
 
   const handleStageSelect = (idx: number) => {
     setAutoCycle(false);
     setActiveIndex(idx);
     setScrubPercent(Math.round(CONSTRUCTION_STAGES[idx].progressTarget * 100));
-    const targetCard = cardRefs.current[idx];
-    if (targetCard) {
-      targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
   };
 
   const handleScrubChange = (val: number) => {
@@ -81,6 +55,15 @@ export default function ConstructionChronicle() {
     const rect = el.getBoundingClientRect();
     const pct = ((clientX - rect.left) / rect.width) * 100;
     setSplitPercent(Math.max(6, Math.min(94, pct)));
+  };
+
+  const handleModeChange = (modeId: ViewerMode) => {
+    setViewerMode(modeId);
+    if (modeId === 'compare') {
+      setAutoCycle(false);
+      setActiveIndex(3);
+      setScrubPercent(100);
+    }
   };
 
   const currentStage = CONSTRUCTION_STAGES[activeIndex];
@@ -114,25 +97,25 @@ export default function ConstructionChronicle() {
   return (
     <section
       id="cronologia"
-      className="relative bg-[#F6F4EF] text-[#171614] py-20 md:py-28 border-t border-[#171614]/10"
+      className="relative w-full max-w-full flex-1 overflow-hidden bg-[#F6F4EF] text-[#171614] pt-16 pb-4 lg:pt-[68px] lg:pb-4 flex flex-col justify-center"
     >
-      <div className="max-w-[1360px] mx-auto px-6 md:px-10">
-        {/* Section Header */}
-        <RevealBlock className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-10 border-b border-[#171614]/12">
+      <div className="max-w-[1360px] w-full max-w-full mx-auto px-4 sm:px-6 md:px-10">
+        {/* Compact Header That Fits Comfortably Below Fixed Navbar */}
+        <RevealBlock className="flex flex-col lg:flex-row lg:items-end justify-between gap-3 pb-3 border-b border-[#171614]/12">
           <div>
-            <p className="text-xs font-medium tracking-wide text-[#736C62]">
+            <p className="text-[11px] font-medium tracking-wide text-[#736C62]">
               Historia Visual de Construcción · Algarrobo, Región de Valparaíso
             </p>
             <h2
-              className="mt-2 font-display font-normal leading-[1.08] tracking-tight text-[#171614]"
-              style={{ fontSize: 'clamp(2rem, 3.5vw, 3.1rem)', textWrap: 'balance' }}
+              className="mt-0.5 font-display font-normal leading-[1.06] tracking-tight text-[#171614]"
+              style={{ fontSize: 'clamp(1.55rem, 2.5vw, 2.2rem)', textWrap: 'balance' }}
             >
-              Del terreno natural a la casa terminada al atardecer.
+              Del terreno natural a tu casa terminada llave en mano.
             </h2>
           </div>
 
           {/* Interactive Mode Switcher (Timeline vs Split Curtain Compare) */}
-          <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#EDEAE2] border border-[#171614]/12 self-start lg:self-auto">
+          <div className="flex flex-wrap sm:inline-flex items-center gap-1 p-1 rounded-xl bg-[#EDEAE2] border border-[#171614]/12 self-start lg:self-auto shrink-0 max-w-full">
             {[
               { id: 'timeline' as ViewerMode, label: 'Avance continuo', icon: SlidersHorizontal },
               { id: 'compare' as ViewerMode, label: 'Comparar con cortina', icon: MoveHorizontal },
@@ -143,8 +126,8 @@ export default function ConstructionChronicle() {
                 <button
                   key={mode.id}
                   type="button"
-                  onClick={() => setViewerMode(mode.id)}
-                  className={`relative inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
+                  onClick={() => handleModeChange(mode.id)}
+                  className={`relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                     isModeActive ? 'text-[#F6F4EF]' : 'text-[#4E4942] hover:text-[#171614]'
                   }`}
                 >
@@ -163,13 +146,123 @@ export default function ConstructionChronicle() {
           </div>
         </RevealBlock>
 
-        {/* Sticky Two-Column Scrollytelling */}
-        <div className="mt-12 grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-          {/* Right Visual Viewport Sticky on Desktop */}
-          <div className="lg:col-span-7 lg:order-2 lg:sticky lg:top-24">
-            <div className="bg-[#EDEAE2] rounded-2xl border border-[#171614]/12 p-4 md:p-5 shadow-[0_18px_45px_rgba(23,22,20,0.08)]">
+        {/* Viewport-Fitted Two-Column Interactive Storyteller (Fits 100% Inside One Laptop Screen) */}
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-5 items-start w-full max-w-full">
+          {/* Left 5 cols: Synchronized Compact 4-Stage Rail */}
+          <div className="lg:col-span-5 min-w-0 w-full max-w-full relative pl-6 md:pl-7 space-y-1.5">
+            {/* Vertical Architectural Connecting Rail */}
+            <div
+              aria-hidden="true"
+              className="absolute left-2 top-4 bottom-4 w-px bg-[#171614]/15"
+            />
+            <motion.div
+              aria-hidden="true"
+              animate={{
+                height: `${Math.max(16, ((activeIndex + 1) / CONSTRUCTION_STAGES.length) * 90)}%`,
+              }}
+              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute left-2 top-4 w-[2px] -translate-x-[0.5px] bg-gradient-to-b from-[#9E7B4F] to-[#171614] rounded-full"
+            />
+
+            {CONSTRUCTION_STAGES.map((stage, idx) => {
+              const isActive = idx === activeIndex;
+              return (
+                <div key={stage.id} className="relative">
+                  {/* Timeline Node */}
+                  <span
+                    aria-hidden="true"
+                    className={`absolute -left-[21px] md:-left-[25px] top-3.5 w-3 h-3 rounded-full border-2 transition-all duration-300 ${
+                      isActive
+                        ? 'bg-[#C49A6C] border-[#171614] scale-125 shadow-[0_0_0_4px_rgba(196,154,108,0.25)]'
+                        : idx < activeIndex
+                        ? 'bg-[#171614] border-[#171614]'
+                        : 'bg-[#F6F4EF] border-[#171614]/35'
+                    }`}
+                  />
+
+                  <SpotlightCard
+                    onClick={() => handleStageSelect(idx)}
+                    spotlightColor={
+                      isActive ? 'rgba(223, 200, 170, 0.14)' : 'rgba(158, 123, 79, 0.12)'
+                    }
+                    className={`rounded-2xl border transition-all duration-300 cursor-pointer ${
+                      isActive
+                        ? 'bg-[#171614] text-[#F6F4EF] border-[#171614] p-3.5 md:p-4 shadow-[0_14px_32px_rgba(23,22,20,0.16)]'
+                        : 'bg-[#EDEAE2] text-[#171614] border-[#171614]/10 hover:border-[#171614]/30 px-3.5 py-2'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className={`font-mono-tech font-semibold shrink-0 ${
+                            isActive ? 'text-[#C49A6C]' : 'text-[#8C6841]'
+                          }`}
+                        >
+                          {stage.step}
+                        </span>
+                        {!isActive && (
+                          <span className="font-medium truncate text-[#2B2824]">
+                            {stage.title}
+                          </span>
+                        )}
+                        {isActive && (
+                          <span className="text-[#DFC8AA]">Etapa {stage.step} de 04</span>
+                        )}
+                      </div>
+                      <span
+                        className={`font-mono-tech text-[11px] shrink-0 ${
+                          isActive ? 'text-[#F6F4EF]' : 'text-[#6B645B]'
+                        }`}
+                      >
+                        {stage.rangeLabel}
+                      </span>
+                    </div>
+
+                    <AnimatePresence initial={false}>
+                      {isActive && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                          className="overflow-hidden"
+                        >
+                          <h3 className="mt-1.5 font-display text-lg md:text-xl font-normal leading-snug">
+                            {stage.title}
+                          </h3>
+
+                          <p className="mt-0.5 text-[11px] font-medium text-[#C49A6C]">
+                            {stage.subtitle}
+                          </p>
+
+                          <p className="mt-1.5 text-xs leading-relaxed text-[#D5CEC3]">
+                            {stage.description}
+                          </p>
+
+                          <div className="mt-2.5 pt-2.5 border-t border-white/15 grid grid-cols-3 gap-2">
+                            {stage.specs.map((spec) => (
+                              <div key={spec.label}>
+                                <div className="text-[10px] text-[#A8A095]">{spec.label}</div>
+                                <div className="mt-0.5 text-[11px] font-semibold tabular-nums leading-tight">
+                                  {spec.value}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </SpotlightCard>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Right 7 cols: Full Uncropped Visual Viewport + Progress Percentage + 4 Stage Tabs */}
+          <div className="lg:col-span-7 min-w-0 w-full max-w-full">
+            <div className="bg-[#EDEAE2] rounded-2xl border border-[#171614]/12 p-2.5 shadow-[0_18px_45px_rgba(23,22,20,0.08)]">
               {viewerMode === 'timeline' ? (
-                <div className="relative w-full aspect-video rounded-xl bg-[#1A1815] overflow-hidden">
+                <div className="relative w-full h-[215px] sm:h-[250px] lg:h-[clamp(230px,36vh,400px)] rounded-xl bg-[#1A1815] overflow-hidden brightness-[0.99] contrast-[1.02] saturate-[0.93]">
                   {CONSTRUCTION_STAGES.map((stage, idx) => (
                     <img
                       key={stage.id}
@@ -177,11 +270,11 @@ export default function ConstructionChronicle() {
                       alt={stage.imageAlt}
                       referrerPolicy="no-referrer"
                       style={{ opacity: getStageOpacity(idx) }}
-                      className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out"
+                      className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-1000 ease-in-out"
                     />
                   ))}
 
-                  <div className="absolute top-3 left-3 px-3.5 py-1.5 rounded-lg bg-[#141311]/90 text-[#F6F4EF] text-xs border border-white/15 shadow-md">
+                  <div className="absolute top-2.5 left-2.5 px-3 py-1 rounded-lg bg-[#141311]/90 text-[#F6F4EF] text-xs border border-white/15 shadow-md">
                     <span className="font-mono-tech text-[#DFC8AA] mr-2">
                       Etapa {currentStage.step}
                     </span>
@@ -191,7 +284,7 @@ export default function ConstructionChronicle() {
                   <button
                     type="button"
                     onClick={() => setAutoCycle((p) => !p)}
-                    className="absolute top-3 right-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#141311]/90 hover:bg-[#141311] text-[#F6F4EF] text-xs border border-white/15 shadow-md transition-colors cursor-pointer"
+                    className="absolute top-2.5 right-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#141311]/90 hover:bg-[#141311] text-[#F6F4EF] text-xs border border-white/15 shadow-md transition-colors cursor-pointer"
                   >
                     {autoCycle ? (
                       <>
@@ -220,7 +313,7 @@ export default function ConstructionChronicle() {
                   }}
                   onPointerUp={() => setIsDraggingSplit(false)}
                   onPointerCancel={() => setIsDraggingSplit(false)}
-                  className="relative w-full aspect-video rounded-xl bg-[#1A1815] overflow-hidden select-none cursor-ew-resize"
+                  className="relative w-full h-[215px] sm:h-[250px] lg:h-[clamp(230px,36vh,400px)] rounded-xl bg-[#1A1815] overflow-hidden select-none cursor-ew-resize"
                 >
                   {/* Right Layer: Selected or Final Stage */}
                   <img
@@ -228,7 +321,7 @@ export default function ConstructionChronicle() {
                     alt={compareStage.imageAlt}
                     referrerPolicy="no-referrer"
                     draggable={false}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover object-center"
                   />
 
                   {/* Left Clipped Layer: Stage 1 Natural Terrain */}
@@ -241,7 +334,7 @@ export default function ConstructionChronicle() {
                       alt={CONSTRUCTION_STAGES[0].imageAlt}
                       referrerPolicy="no-referrer"
                       draggable={false}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-center"
                     />
                   </div>
 
@@ -250,23 +343,25 @@ export default function ConstructionChronicle() {
                     style={{ left: `${splitPercent}%` }}
                     className="absolute top-0 bottom-0 -translate-x-1/2 w-[2px] bg-[#DFC8AA] shadow-[0_0_16px_rgba(223,200,170,0.9)] pointer-events-none"
                   >
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-[#141311] border-2 border-[#DFC8AA] text-[#F6F4EF] flex items-center justify-center shadow-xl">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[#141311] border-2 border-[#DFC8AA] text-[#F6F4EF] flex items-center justify-center shadow-xl">
                       <MoveHorizontal className="w-4 h-4" />
                     </div>
                   </div>
 
                   {/* Labels */}
-                  <div className="pointer-events-none absolute top-3 left-3 px-3 py-1.5 rounded-lg bg-[#141311]/90 text-[#F6F4EF] text-[11px] border border-white/15">
+                  <div className="pointer-events-none absolute top-2.5 left-2.5 px-3 py-1 rounded-lg bg-[#141311]/90 text-[#F6F4EF] text-[11px] border border-white/15">
                     Terreno inicial (0%)
                   </div>
-                  <div className="pointer-events-none absolute top-3 right-3 px-3 py-1.5 rounded-lg bg-[#141311]/90 text-[#DFC8AA] text-[11px] border border-white/15">
-                    {compareStage.step} · {compareStage.rangeLabel}
+                  <div className="pointer-events-none absolute top-2.5 right-2.5 px-3 py-1 rounded-lg bg-[#141311]/90 text-[#DFC8AA] text-[11px] border border-white/15">
+                    {compareStage.id === 'terminada'
+                      ? 'Casa terminada (100%)'
+                      : `${compareStage.step} · ${compareStage.rangeLabel}`}
                   </div>
                 </div>
               )}
 
-              {/* Interactive Timeline Scrubber + Stage Tabs */}
-              <div className="mt-5 pt-4 border-t border-[#171614]/10 space-y-4">
+              {/* Interactive Timeline Scrubber + Progress % + Stage Tabs (Always Visible!) */}
+              <div className="mt-2.5 pt-2 border-t border-[#171614]/10 space-y-2">
                 <div className="flex items-center justify-between gap-4">
                   <label
                     htmlFor="construction-progress-slider"
@@ -284,7 +379,7 @@ export default function ConstructionChronicle() {
                 </div>
 
                 {viewerMode === 'timeline' ? (
-                  <div className="relative flex items-center h-6">
+                  <div className="relative flex items-center h-4">
                     <div className="w-full h-1.5 rounded-full bg-[#171614]/12 overflow-hidden">
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-[#9E7B4F] to-[#171614] transition-all duration-150"
@@ -302,11 +397,11 @@ export default function ConstructionChronicle() {
                     />
                     <div
                       style={{ left: `${scrubPercent}%` }}
-                      className="pointer-events-none absolute -translate-x-1/2 w-5 h-5 rounded-full bg-[#171614] border-2 border-[#F6F4EF] shadow-md transition-all duration-150"
+                      className="pointer-events-none absolute -translate-x-1/2 w-4 h-4 rounded-full bg-[#171614] border-2 border-[#F6F4EF] shadow-md transition-all duration-150"
                     />
                   </div>
                 ) : (
-                  <div className="relative flex items-center h-6">
+                  <div className="relative flex items-center h-4">
                     <div className="w-full h-1.5 rounded-full bg-[#171614]/12 overflow-hidden">
                       <div
                         className="h-full rounded-full bg-[#9E7B4F]"
@@ -324,7 +419,7 @@ export default function ConstructionChronicle() {
                     />
                     <div
                       style={{ left: `${splitPercent}%` }}
-                      className="pointer-events-none absolute -translate-x-1/2 w-5 h-5 rounded-full bg-[#9E7B4F] border-2 border-[#F6F4EF] shadow-md"
+                      className="pointer-events-none absolute -translate-x-1/2 w-4 h-4 rounded-full bg-[#9E7B4F] border-2 border-[#F6F4EF] shadow-md"
                     />
                   </div>
                 )}
@@ -337,7 +432,7 @@ export default function ConstructionChronicle() {
                         key={stage.id}
                         type="button"
                         onClick={() => handleStageSelect(idx)}
-                        className={`relative px-3.5 py-2.5 rounded-xl text-left border transition-colors cursor-pointer ${
+                        className={`relative px-3 py-1.5 rounded-xl text-left border transition-colors cursor-pointer ${
                           isActive
                             ? 'text-[#F6F4EF] border-[#171614]'
                             : 'bg-[#F6F4EF] text-[#4E4942] border-[#171614]/12 hover:bg-[#E4DFD3]'
@@ -350,10 +445,10 @@ export default function ConstructionChronicle() {
                             className="absolute inset-0 rounded-xl bg-[#171614]"
                           />
                         )}
-                        <div className="relative z-10 font-mono-tech text-[11px] opacity-80">
+                        <div className="relative z-10 font-mono-tech text-[10px] opacity-80">
                           {stage.step} · {stage.rangeLabel}
                         </div>
-                        <div className="relative z-10 mt-0.5 text-xs font-semibold truncate">
+                        <div className="relative z-10 text-xs font-semibold truncate">
                           {stage.id === 'terreno'
                             ? 'Terreno'
                             : stage.id === 'obra-gruesa'
@@ -368,106 +463,6 @@ export default function ConstructionChronicle() {
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Left Scrolling Chronicle Cards with Vertical Tracing Timeline Line */}
-          <div className="lg:col-span-5 lg:order-1 relative pl-7 md:pl-9 space-y-8">
-            {/* Vertical Architectural Connecting Rail */}
-            <div
-              aria-hidden="true"
-              className="absolute left-2.5 top-6 bottom-6 w-px bg-[#171614]/15"
-            />
-            <motion.div
-              aria-hidden="true"
-              animate={{ height: `${Math.max(12, ((activeIndex + 1) / CONSTRUCTION_STAGES.length) * 100)}%` }}
-              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-              className="absolute left-2.5 top-6 w-[2px] -translate-x-[0.5px] bg-gradient-to-b from-[#9E7B4F] to-[#171614] rounded-full"
-            />
-
-            {CONSTRUCTION_STAGES.map((stage, idx) => {
-              const isActive = idx === activeIndex;
-              return (
-                <div
-                  key={stage.id}
-                  ref={(el) => {
-                    cardRefs.current[idx] = el;
-                  }}
-                  className="relative"
-                >
-                  {/* Timeline Node */}
-                  <span
-                    aria-hidden="true"
-                    className={`absolute -left-[25px] md:-left-[33px] top-8 w-3.5 h-3.5 rounded-full border-2 transition-all duration-300 ${
-                      isActive
-                        ? 'bg-[#C49A6C] border-[#171614] scale-125 shadow-[0_0_0_4px_rgba(196,154,108,0.25)]'
-                        : idx < activeIndex
-                        ? 'bg-[#171614] border-[#171614]'
-                        : 'bg-[#F6F4EF] border-[#171614]/35'
-                    }`}
-                  />
-
-                  <SpotlightCard
-                    onClick={() => handleStageSelect(idx)}
-                    spotlightColor={
-                      isActive ? 'rgba(223, 200, 170, 0.14)' : 'rgba(158, 123, 79, 0.12)'
-                    }
-                    className={`rounded-2xl p-7 md:p-8 border transition-all duration-300 cursor-pointer ${
-                      isActive
-                        ? 'bg-[#171614] text-[#F6F4EF] border-[#171614] shadow-[0_18px_40px_rgba(23,22,20,0.16)]'
-                        : 'bg-[#EDEAE2] text-[#171614] border-[#171614]/10 hover:border-[#171614]/30'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-xs">
-                      <span className={isActive ? 'text-[#DFC8AA]' : 'text-[#736C62]'}>
-                        Etapa {stage.step} de 04
-                      </span>
-                      <span className="font-mono-tech">{stage.rangeLabel}</span>
-                    </div>
-
-                    <h3 className="mt-4 font-display text-2xl md:text-3xl font-normal leading-snug">
-                      {stage.title}
-                    </h3>
-
-                    <p
-                      className={`mt-1.5 text-xs font-medium ${
-                        isActive ? 'text-[#C49A6C]' : 'text-[#8C6841]'
-                      }`}
-                    >
-                      {stage.subtitle}
-                    </p>
-
-                    <p
-                      className={`mt-4 text-sm leading-relaxed ${
-                        isActive ? 'text-[#D5CEC3]' : 'text-[#3F3B36]'
-                      }`}
-                    >
-                      {stage.description}
-                    </p>
-
-                    <div
-                      className={`mt-6 pt-5 border-t grid grid-cols-1 sm:grid-cols-3 gap-4 ${
-                        isActive ? 'border-white/15' : 'border-[#171614]/10'
-                      }`}
-                    >
-                      {stage.specs.map((spec) => (
-                        <div key={spec.label}>
-                          <div
-                            className={`text-[11px] ${
-                              isActive ? 'text-[#A8A095]' : 'text-[#6B645B]'
-                            }`}
-                          >
-                            {spec.label}
-                          </div>
-                          <div className="mt-1 text-xs font-semibold tabular-nums">
-                            {spec.value}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </SpotlightCard>
-                </div>
-              );
-            })}
           </div>
         </div>
       </div>

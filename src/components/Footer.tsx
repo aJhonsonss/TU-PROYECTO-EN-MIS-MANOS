@@ -4,8 +4,8 @@ interface FooterProps {
 
 export default function Footer({ onNavigate }: FooterProps) {
   return (
-    <footer className="bg-[#0F0E0D] text-[#B8B0A4] border-t border-white/10 py-12">
-      <div className="max-w-[1360px] mx-auto px-6 md:px-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+    <footer className="w-full max-w-full overflow-hidden bg-[#0F0E0D] text-[#B8B0A4] border-t border-white/10 py-12">
+      <div className="max-w-[1360px] w-full max-w-full mx-auto px-4 sm:px-6 md:px-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
         <div>
           <span className="font-display text-xl sm:text-2xl font-semibold tracking-wide uppercase text-[#F6F4EF]">
             Tu Proyecto en Mis Manos
@@ -21,7 +21,6 @@ export default function Footer({ onNavigate }: FooterProps) {
             { id: 'cronologia', label: 'Proceso' },
             { id: 'servicios', label: 'Servicios' },
             { id: 'obra-real', label: 'Obra Real' },
-            { id: 'tour-interior', label: 'Tour Interior' },
             { id: 'equipo', label: 'Equipo' },
             { id: 'cotizador', label: 'Evaluar Terreno' },
           ].map((link) => (

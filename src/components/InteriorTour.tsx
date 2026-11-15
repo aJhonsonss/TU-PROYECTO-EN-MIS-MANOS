@@ -27,9 +27,9 @@ export default function InteriorTour() {
   return (
     <section
       id="tour-interior"
-      className="bg-[#F6F4EF] text-[#171614] py-20 md:py-24 border-t border-[#171614]/10"
+      className="w-full max-w-full overflow-hidden bg-[#F6F4EF] text-[#171614] pt-24 pb-20 md:pt-28 md:pb-24 lg:min-h-dvh flex flex-col justify-center"
     >
-      <div className="max-w-[1360px] mx-auto px-6 md:px-10">
+      <div className="max-w-[1360px] w-full max-w-full mx-auto px-4 sm:px-6 md:px-10">
         {/* Editorial Header */}
         <RevealBlock className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8">
           <div className="max-w-2xl">
@@ -51,9 +51,9 @@ export default function InteriorTour() {
         </RevealBlock>
 
         {/* Interactive Panoramic Tour Canvas + Specification Drawer */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full max-w-full">
           {/* Left: Panoramic Image with High-Contrast Hotspots + Adjacent Floating Description */}
-          <div className="lg:col-span-8 flex flex-col gap-3.5">
+          <div className="lg:col-span-8 min-w-0 w-full max-w-full flex flex-col gap-3.5">
             <div className="relative w-full aspect-video rounded-2xl bg-[#1D1B18] border border-[#171614]/15 overflow-hidden shadow-[0_20px_50px_rgba(23,22,20,0.12)]">
               <img
                 src={INTERIOR_TOUR_IMAGE}
@@ -174,7 +174,7 @@ export default function InteriorTour() {
           </div>
 
           {/* Right Specification Inspector Card */}
-          <div className="lg:col-span-4 flex flex-col justify-between bg-[#EDEAE2] rounded-2xl border border-[#171614]/12 p-7 md:p-8 min-h-full">
+          <div className="lg:col-span-4 min-w-0 w-full max-w-full flex flex-col justify-between bg-[#EDEAE2] rounded-2xl border border-[#171614]/12 p-6 sm:p-7 md:p-8 min-h-full">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentHotspot.id}
