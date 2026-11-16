@@ -79,7 +79,7 @@ export default function Navbar({ onNavigate }: NavbarProps) {
             e.preventDefault();
             handleLinkClick('hero-3d');
           }}
-          className="inline-flex items-center gap-2.5 font-display text-sm sm:text-base lg:text-lg font-semibold tracking-wide uppercase whitespace-nowrap truncate max-w-[calc(100%-56px)] lg:max-w-none shrink-0 focus-visible:outline-2 focus-visible:outline-[#C49A6C]"
+          className="inline-flex items-center gap-2 font-display text-[13px] sm:text-base lg:text-lg font-semibold tracking-wide uppercase whitespace-nowrap min-w-0 flex-1 lg:flex-initial focus-visible:outline-2 focus-visible:outline-[#C49A6C]"
         >
           <span
             aria-hidden="true"

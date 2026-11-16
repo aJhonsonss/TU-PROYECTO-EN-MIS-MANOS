@@ -188,7 +188,7 @@ export default function App() {
       <ScrollTraceBeam />
 
       <main className="w-full max-w-full overflow-hidden">
-        <div className="relative min-h-[100vh] lg:h-[100vh] w-full flex flex-col overflow-hidden">
+        <div className="relative lg:min-h-[100vh] lg:h-[100vh] w-full flex flex-col overflow-hidden">
           <HeroSection
             onExploreStart={() => navigateToSection('cronologia')}
             onScheduleClick={() => navigateToSection('cotizador')}
@@ -196,15 +196,15 @@ export default function App() {
           />
         </div>
 
-        <div className="relative min-h-[100vh] lg:h-[100vh] w-full flex flex-col overflow-hidden">
+        <div className="relative lg:min-h-[100vh] lg:h-[100vh] w-full flex flex-col overflow-hidden">
           <ConstructionChronicle />
         </div>
 
-        <div className="relative min-h-[100vh] lg:h-[100vh] w-full flex flex-col overflow-hidden">
+        <div className="relative lg:min-h-[100vh] w-full flex flex-col overflow-x-hidden">
           <ServicesEcosystem onSelectQuoteWithAddon={handleSelectQuoteWithAddon} />
         </div>
 
-        <div className="relative min-h-[100vh] lg:h-[100vh] w-full flex flex-col overflow-hidden">
+        <div className="relative lg:min-h-[100vh] lg:h-[100vh] w-full flex flex-col overflow-hidden">
           <RealProjectShowcase onScheduleClick={() => navigateToSection('cotizador')} />
         </div>
 

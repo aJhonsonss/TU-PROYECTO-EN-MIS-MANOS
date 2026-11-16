@@ -97,7 +97,7 @@ export default function ConstructionChronicle() {
   return (
     <section
       id="cronologia"
-      className="relative w-full max-w-full flex-1 overflow-hidden bg-[#F6F4EF] text-[#171614] pt-16 pb-4 lg:pt-[68px] lg:pb-4 flex flex-col justify-center"
+      className="relative w-full max-w-full flex-1 overflow-hidden bg-[#F6F4EF] text-[#171614] pt-[82px] pb-12 sm:pt-24 sm:pb-14 lg:pt-[68px] lg:pb-4 flex flex-col justify-center"
     >
       <div className="max-w-[1360px] w-full max-w-full mx-auto px-4 sm:px-6 md:px-10">
         {/* Compact Header That Fits Comfortably Below Fixed Navbar */}
@@ -146,10 +146,10 @@ export default function ConstructionChronicle() {
           </div>
         </RevealBlock>
 
-        {/* Viewport-Fitted Two-Column Interactive Storyteller (Fits 100% Inside One Laptop Screen) */}
+        {/* Viewport-Fitted Two-Column Interactive Storyteller (Visual First on Mobile) */}
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-5 items-start w-full max-w-full">
           {/* Left 5 cols: Synchronized Compact 4-Stage Rail */}
-          <div className="lg:col-span-5 min-w-0 w-full max-w-full relative pl-6 md:pl-7 space-y-1.5">
+          <div className="order-2 lg:order-1 lg:col-span-5 min-w-0 w-full max-w-full relative pl-5 sm:pl-6 md:pl-7 space-y-1.5">
             {/* Vertical Architectural Connecting Rail */}
             <div
               aria-hidden="true"
@@ -239,11 +239,11 @@ export default function ConstructionChronicle() {
                             {stage.description}
                           </p>
 
-                          <div className="mt-2.5 pt-2.5 border-t border-white/15 grid grid-cols-3 gap-2">
+                          <div className="mt-2.5 pt-2.5 border-t border-white/15 grid grid-cols-1 sm:grid-cols-3 gap-2">
                             {stage.specs.map((spec) => (
-                              <div key={spec.label}>
+                              <div key={spec.label} className="flex items-baseline justify-between sm:block gap-2">
                                 <div className="text-[10px] text-[#A8A095]">{spec.label}</div>
-                                <div className="mt-0.5 text-[11px] font-semibold tabular-nums leading-tight">
+                                <div className="mt-0.5 text-[11px] font-semibold tabular-nums leading-tight text-right sm:text-left">
                                   {spec.value}
                                 </div>
                               </div>
@@ -259,10 +259,10 @@ export default function ConstructionChronicle() {
           </div>
 
           {/* Right 7 cols: Full Uncropped Visual Viewport + Progress Percentage + 4 Stage Tabs */}
-          <div className="lg:col-span-7 min-w-0 w-full max-w-full">
-            <div className="bg-[#EDEAE2] rounded-2xl border border-[#171614]/12 p-2.5 shadow-[0_18px_45px_rgba(23,22,20,0.08)]">
+          <div className="order-1 lg:order-2 lg:col-span-7 min-w-0 w-full max-w-full">
+            <div className="bg-[#EDEAE2] rounded-2xl border border-[#171614]/12 p-2 sm:p-2.5 shadow-[0_18px_45px_rgba(23,22,20,0.08)]">
               {viewerMode === 'timeline' ? (
-                <div className="relative w-full h-[215px] sm:h-[250px] lg:h-[clamp(230px,36vh,400px)] rounded-xl bg-[#1A1815] overflow-hidden brightness-[0.99] contrast-[1.02] saturate-[0.93]">
+                <div className="relative w-full aspect-[16/10] sm:aspect-auto sm:h-[260px] lg:h-[clamp(230px,36vh,400px)] rounded-xl bg-[#1A1815] overflow-hidden brightness-[0.99] contrast-[1.02] saturate-[0.93]">
                   {CONSTRUCTION_STAGES.map((stage, idx) => (
                     <img
                       key={stage.id}
@@ -274,8 +274,8 @@ export default function ConstructionChronicle() {
                     />
                   ))}
 
-                  <div className="absolute top-2.5 left-2.5 px-3 py-1 rounded-lg bg-[#141311]/90 text-[#F6F4EF] text-xs border border-white/15 shadow-md">
-                    <span className="font-mono-tech text-[#DFC8AA] mr-2">
+                  <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 px-2.5 sm:px-3 py-1 rounded-lg bg-[#141311]/90 text-[#F6F4EF] text-[10px] sm:text-xs border border-white/15 shadow-md">
+                    <span className="font-mono-tech text-[#DFC8AA] mr-1.5 sm:mr-2">
                       Etapa {currentStage.step}
                     </span>
                     <span>{currentStage.rangeLabel}</span>
@@ -284,17 +284,19 @@ export default function ConstructionChronicle() {
                   <button
                     type="button"
                     onClick={() => setAutoCycle((p) => !p)}
-                    className="absolute top-2.5 right-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#141311]/90 hover:bg-[#141311] text-[#F6F4EF] text-xs border border-white/15 shadow-md transition-colors cursor-pointer"
+                    className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg bg-[#141311]/90 hover:bg-[#141311] text-[#F6F4EF] text-[10px] sm:text-xs border border-white/15 shadow-md transition-colors cursor-pointer"
                   >
                     {autoCycle ? (
                       <>
-                        <Pause className="w-3.5 h-3.5 text-[#DFC8AA]" />
-                        <span>Ciclo automático</span>
+                        <Pause className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#DFC8AA]" />
+                        <span className="hidden sm:inline">Ciclo automático</span>
+                        <span className="sm:hidden">Pausar</span>
                       </>
                     ) : (
                       <>
-                        <Play className="w-3.5 h-3.5 text-[#DFC8AA]" />
-                        <span>Reanudar ciclo</span>
+                        <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#DFC8AA]" />
+                        <span className="hidden sm:inline">Reanudar ciclo</span>
+                        <span className="sm:hidden">Reanudar</span>
                       </>
                     )}
                   </button>
@@ -313,7 +315,7 @@ export default function ConstructionChronicle() {
                   }}
                   onPointerUp={() => setIsDraggingSplit(false)}
                   onPointerCancel={() => setIsDraggingSplit(false)}
-                  className="relative w-full h-[215px] sm:h-[250px] lg:h-[clamp(230px,36vh,400px)] rounded-xl bg-[#1A1815] overflow-hidden select-none cursor-ew-resize"
+                  className="relative w-full aspect-[16/10] sm:aspect-auto sm:h-[260px] lg:h-[clamp(230px,36vh,400px)] rounded-xl bg-[#1A1815] overflow-hidden select-none cursor-ew-resize"
                 >
                   {/* Right Layer: Selected or Final Stage */}
                   <img

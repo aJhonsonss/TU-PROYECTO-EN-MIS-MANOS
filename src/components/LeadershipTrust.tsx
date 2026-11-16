@@ -30,29 +30,29 @@ export default function LeadershipTrust({ onScheduleClick }: LeadershipTrustProp
       {/* Slide 1: Founder Spotlight + 5 Compact KPI & Work-Mode Cards */}
       <section
         id="equipo"
-        className="relative min-h-[100vh] lg:h-[100vh] w-full max-w-full flex flex-col justify-center overflow-hidden bg-[#EDEAE2] text-[#171614] pt-[74px] pb-8 lg:pt-[76px] lg:pb-6 border-t border-[#171614]/10"
+        className="relative lg:min-h-[100vh] lg:h-[100vh] w-full max-w-full flex flex-col justify-center overflow-hidden bg-[#EDEAE2] text-[#171614] pt-[82px] pb-12 sm:pt-24 sm:pb-14 lg:pt-[76px] lg:pb-6 border-t border-[#171614]/10"
       >
-        <div className="max-w-[1360px] w-full max-w-full mx-auto px-4 sm:px-6 md:px-10 flex flex-col justify-center gap-4 lg:gap-5">
+        <div className="max-w-[1360px] w-full max-w-full mx-auto px-4 sm:px-6 md:px-10 flex flex-col justify-center gap-5 lg:gap-5">
           {/* CEO / Founder Spotlight */}
-          <RevealBlock className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center w-full max-w-full">
+          <RevealBlock className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 lg:gap-10 items-center w-full max-w-full">
             <div className="lg:col-span-4 min-w-0 w-full">
               <button
                 type="button"
                 onClick={() => setIsPortraitExpanded(true)}
                 aria-label="Ampliar fotografía de Antonio Gianny Soto Solís"
-                className="group relative block w-full text-left h-[320px] sm:h-[360px] lg:h-[clamp(285px,44vh,410px)] rounded-2xl overflow-hidden border border-[#171614]/15 bg-[#1D1B18] shadow-[0_18px_40px_rgba(23,22,20,0.14)] cursor-zoom-in focus-visible:outline-2 focus-visible:outline-[#C49A6C]"
+                className="group relative block w-full max-w-[430px] mx-auto lg:max-w-none lg:mx-0 text-left aspect-[3/3.6] lg:aspect-auto lg:h-[clamp(295px,45vh,420px)] rounded-2xl overflow-hidden border border-[#171614]/15 bg-[#1D1B18] shadow-[0_18px_40px_rgba(23,22,20,0.14)] cursor-zoom-in focus-visible:outline-2 focus-visible:outline-[#C49A6C]"
               >
                 <img
                   src={CEO_PORTRAIT_IMAGE}
                   alt="Antonio Gianny Soto Solís, Fundador y Director de Tu Proyecto en Mis Manos"
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover object-[50%_18%] transition-transform duration-500 group-hover:scale-[1.03]"
+                  className="w-full h-full object-cover object-[50%_54%] transition-transform duration-500 group-hover:scale-[1.03]"
                 />
                 <span className="absolute top-3 right-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#141311]/75 backdrop-blur-sm border border-white/15 text-[10px] font-medium text-[#F6F4EF] opacity-85 group-hover:opacity-100 transition-opacity">
                   <Maximize2 className="w-3 h-3 text-[#DFC8AA]" />
                   Ver completa
                 </span>
-                <div className="absolute inset-x-0 bottom-0 pt-10 pb-3 px-3.5 sm:px-4 bg-gradient-to-t from-[#141311]/95 via-[#141311]/65 to-transparent text-[#F6F4EF]">
+                <div className="absolute inset-x-0 bottom-0 pt-8 pb-2.5 px-3.5 sm:px-4 bg-gradient-to-t from-[#141311]/95 via-[#141311]/60 to-transparent text-[#F6F4EF]">
                   <div className="text-[11px] font-medium tracking-wide text-[#DFC8AA]">
                     Fundador y Dirección Directa en Obra
                   </div>
@@ -117,26 +117,26 @@ export default function LeadershipTrust({ onScheduleClick }: LeadershipTrustProp
             </div>
           </RevealBlock>
 
-          {/* Quantified Trust & Transparent Work-Mode Cards */}
-          <RevealBlock delay={0.06} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 rounded-2xl overflow-hidden border border-[#171614]/12 bg-[#F6F4EF]">
+          {/* Quantified Trust & Transparent Work-Mode Cards (2-Col Balanced on Mobile, 5-Col on Desktop) */}
+          <RevealBlock delay={0.06} className="grid grid-cols-2 lg:grid-cols-5 rounded-2xl overflow-hidden border border-[#171614]/12 bg-[#F6F4EF]">
             {TRUST_METRICS.map((metric, idx) => {
               const isLast = idx === TRUST_METRICS.length - 1;
               return (
                 <div
                   key={metric.label}
                   className={`p-3.5 sm:px-4 sm:py-3.5 border-[#171614]/10 ${
-                    !isLast ? 'border-b sm:border-b lg:border-b-0 lg:border-r' : ''
-                  } ${idx % 2 === 0 && !isLast ? 'sm:border-r' : 'sm:border-r-0'} ${
-                    isLast ? 'sm:col-span-2 lg:col-span-1' : ''
+                    !isLast ? 'border-b lg:border-b-0 lg:border-r' : ''
+                  } ${idx % 2 === 0 && !isLast ? 'border-r' : 'lg:border-r'} ${
+                    isLast ? 'col-span-2 lg:col-span-1 lg:border-r-0' : ''
                   }`}
                 >
-                  <div className="font-display text-xl sm:text-2xl lg:text-[22px] xl:text-[25px] font-normal text-[#171614] leading-tight tabular-nums">
+                  <div className="font-display text-lg sm:text-2xl lg:text-[22px] xl:text-[25px] font-normal text-[#171614] leading-tight tabular-nums">
                     {metric.value}
                   </div>
-                  <div className="mt-1 text-xs font-semibold text-[#171614] leading-snug">
+                  <div className="mt-1 text-[11px] sm:text-xs font-semibold text-[#171614] leading-snug">
                     {metric.label}
                   </div>
-                  <div className="mt-0.5 text-[11px] text-[#6B645B] leading-snug">
+                  <div className="mt-0.5 text-[10px] sm:text-[11px] text-[#6B645B] leading-snug">
                     {metric.context}
                   </div>
                 </div>
@@ -149,7 +149,7 @@ export default function LeadershipTrust({ onScheduleClick }: LeadershipTrustProp
       {/* Slide 2: Multidisciplinary Team Interactive Spotlight Cards — Full Centered Viewport */}
       <section
         id="areas-tecnicas"
-        className="relative min-h-[100vh] lg:h-[100vh] w-full max-w-full flex flex-col justify-center overflow-hidden bg-[#EDEAE2] text-[#171614] pt-[78px] pb-12 lg:pt-[82px] lg:pb-10 border-t border-[#171614]/10"
+        className="relative lg:min-h-[100vh] lg:h-[100vh] w-full max-w-full flex flex-col justify-center overflow-hidden bg-[#EDEAE2] text-[#171614] pt-12 pb-12 sm:pt-16 sm:pb-14 lg:pt-[82px] lg:pb-10 border-t border-[#171614]/10"
       >
         <div className="max-w-[1360px] w-full max-w-full mx-auto px-4 sm:px-6 md:px-10 flex flex-col justify-center">
           <RevealBlock className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 lg:pb-7">

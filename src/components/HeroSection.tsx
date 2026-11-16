@@ -54,7 +54,7 @@ export default function HeroSection({
   return (
     <section
       id="hero-3d"
-      className="relative w-full max-w-full flex-1 overflow-x-hidden bg-[#141311] text-[#F6F4EF] pt-20 pb-5 lg:pt-[84px] lg:pb-6 flex flex-col justify-center"
+      className="relative w-full max-w-full flex-1 overflow-x-hidden bg-[#141311] text-[#F6F4EF] pt-[82px] pb-10 sm:pt-24 sm:pb-12 lg:pt-[84px] lg:pb-6 flex flex-col justify-center"
     >
       <div className="relative max-w-[1360px] w-full max-w-full mx-auto px-4 sm:px-6 md:px-10">
         {/* Balanced Above-The-Fold Editorial Composition */}
@@ -75,7 +75,7 @@ export default function HeroSection({
             <div className="flex items-center gap-2.5 text-xs tracking-wide text-[#DFC8AA]">
               <span>Construimos tu sueño</span>
               <span aria-hidden="true">·</span>
-              <span>Algarrobo y Zona Central</span>
+              <span>Quinta Región y Región Metropolitana</span>
             </div>
 
             <h1
@@ -93,7 +93,7 @@ export default function HeroSection({
               presupuesto cerrado y plazo garantizado.
             </p>
 
-            <div className="mt-5 lg:mt-6 flex flex-wrap items-center gap-3">
+            <div className="mt-5 lg:mt-6 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3">
               <button
                 ref={magneticBtnRef}
                 type="button"
@@ -103,7 +103,7 @@ export default function HeroSection({
                 style={{
                   transform: `translate3d(${magneticOffset.x}px, ${magneticOffset.y}px, 0)`,
                 }}
-                className="inline-flex items-center gap-2 bg-[#F6F4EF] text-[#141311] px-5 py-2.5 lg:py-3 rounded-xl text-xs md:text-sm font-semibold tracking-wide transition-transform duration-150 ease-out hover:bg-[#E7E1D6] cursor-pointer whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-[#C49A6C]"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#F6F4EF] text-[#141311] px-5 py-3 rounded-xl text-xs md:text-sm font-semibold tracking-wide transition-transform duration-150 ease-out hover:bg-[#E7E1D6] cursor-pointer whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-[#C49A6C]"
               >
                 <span>Ver proceso de obra</span>
                 <ArrowDownRight className="w-4 h-4" />
@@ -112,7 +112,7 @@ export default function HeroSection({
               <button
                 type="button"
                 onClick={onScheduleClick}
-                className="inline-flex items-center gap-2 px-5 py-2.5 lg:py-3 rounded-xl text-xs md:text-sm font-medium text-[#F6F4EF] border border-white/25 bg-white/5 hover:bg-white/12 transition-colors cursor-pointer whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-[#C49A6C]"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs md:text-sm font-medium text-[#F6F4EF] border border-white/25 bg-white/5 hover:bg-white/12 transition-colors cursor-pointer whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-[#C49A6C]"
               >
                 <span>Agendar evaluación</span>
               </button>
@@ -124,9 +124,9 @@ export default function HeroSection({
             initial={{ opacity: 0, scale: 0.985 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.65, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10 lg:col-span-7 min-w-0 w-full max-w-full flex flex-col gap-3"
+            className="relative z-10 lg:col-span-7 min-w-0 w-full max-w-full flex flex-col gap-2.5 sm:gap-3"
           >
-            <div className="w-full max-w-full h-[280px] sm:h-[360px] lg:h-[clamp(300px,50vh,520px)] rounded-2xl border border-white/15 overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
+            <div className="w-full max-w-full aspect-[16/10] sm:aspect-auto sm:h-[360px] lg:h-[clamp(300px,50vh,520px)] rounded-2xl border border-white/15 overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
               <PhotorealisticVillaOrbit
                 activeZone={activeZone}
                 onUserInteract={() => setAutoPauseUntil(Date.now() + 9000)}
@@ -138,11 +138,11 @@ export default function HeroSection({
             </div>
 
             {/* Clean Zone Selector Bar Synced 1:1 With Automatic Slideshow */}
-            <div className="w-full max-w-full flex flex-wrap items-center justify-between gap-1 p-1.5 bg-[#1B1916] rounded-2xl border border-white/12">
-              <span className="text-[11px] text-[#968E83] px-2.5 whitespace-nowrap shrink-0">
+            <div className="w-full max-w-full flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 p-2 sm:p-1.5 bg-[#1B1916] rounded-2xl border border-white/12">
+              <span className="text-[11px] text-[#968E83] px-1.5 sm:px-2.5 whitespace-nowrap shrink-0">
                 Recorrer:
               </span>
-              <div className="flex flex-wrap items-center gap-1 flex-1 min-w-0 justify-end sm:justify-start">
+              <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-1 flex-1 min-w-0">
                 {ZONE_VISIT_POINTS.map((zone, idx) => {
                   const active = activeZone.id === zone.id;
                   return (
@@ -150,7 +150,7 @@ export default function HeroSection({
                       key={zone.id}
                       type="button"
                       onClick={() => handleManualZoneSelect(zone, idx)}
-                      className={`relative px-3 py-1.5 rounded-xl text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                      className={`relative px-2 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap truncate text-center cursor-pointer ${
                         active ? 'text-[#141311]' : 'text-[#D5CEC3] hover:text-white'
                       }`}
                     >

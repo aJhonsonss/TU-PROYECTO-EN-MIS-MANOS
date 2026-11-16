@@ -35,8 +35,9 @@ export interface ZoneVisitPoint {
 }
 
 export interface ServicePillar {
-  id: 'casa' | 'quincho' | 'piscina';
+  id: 'terreno' | 'arquitectura' | 'casa' | 'quincho' | 'piscina' | 'especiales';
   number: string;
+  category: string;
   title: string;
   shortTitle: string;
   headline: string;
@@ -79,7 +80,7 @@ export const STAGE_4_IMAGE = HERO_MAIN_IMAGE;
 export const INTERIOR_TOUR_IMAGE = '/src/assets/images/interior_living_panoramic_1794667746412.jpg';
 export const QUINCHO_SERVICE_IMAGE = '/src/assets/images/service_quincho_terrace_1794667745553.jpg';
 export const POOL_SERVICE_IMAGE = '/src/assets/images/service_infinity_pool_1794667746112.jpg';
-export const CEO_PORTRAIT_IMAGE = '/src/assets/images/ceo_founder_portrait_1794667746085.jpg';
+export const CEO_PORTRAIT_IMAGE = '/src/assets/images/antonio_exacto_natural_obra_1794839571230.jpg';
 
 export const ORBIT_ANGLES: OrbitAngle[] = [
   {
@@ -266,51 +267,105 @@ export const CONSTRUCTION_STAGES: ConstructionStage[] = [
 
 export const SERVICE_PILLARS: ServicePillar[] = [
   {
-    id: 'casa',
+    id: 'terreno',
     number: '01',
-    shortTitle: 'Casas Mediterráneas',
-    title: 'Construcción Integral de Casas Mediterráneas',
-    headline: 'Arquitectura limpia, eficiencia térmica y estacionamientos integrados en tu parcela.',
+    category: 'Terreno y Factibilidad',
+    shortTitle: 'Estudio de Terreno',
+    title: 'Evaluación Previa y Estudio de Parcela',
+    headline: 'Asesoría técnica antes o después de adquirir tu terreno.',
     description:
-      'Diseñamos y construimos residencias de 180 a 480 m² bajo contrato a suma alzada sin sorpresas. Volúmenes puros en blanco mineral, piedra natural, hormigón visto y grandes paños de termopanel orientados al paisaje chileno, con accesos vehiculares pavimentados para 3 o más vehículos.',
-    image: ANGLE_DRIVEWAY_IMAGE,
-    imageAlt: 'Casa mediterránea con estacionamiento en adoquín, piedra natural y grandes ventanales',
+      'Revisamos en terreno si tu parcela en la V Región o RM cumple condiciones de suelo, pendientes y normativa antes de proyectar.',
+    image: STAGE_1_IMAGE,
+    imageAlt: 'Parcela natural con estacado topográfico previo a construcción',
     specs: [
-      'Diseño arquitectónico a medida + cálculo estructural',
-      'Eficiencia térmica certificada para clima costero y valle central',
-      'Estacionamiento amplio y acceso vehicular en adoquín o gravilla estabilizada',
+      'Levantamiento topográfico y análisis de pendientes',
+      'Calicatas de mecánica de suelos (NCh 1508)',
+      'Estudio solar, vientos dominantes y emplazamiento',
+    ],
+  },
+  {
+    id: 'arquitectura',
+    number: '02',
+    category: 'Diseño e Ingeniería',
+    shortTitle: 'Arquitectura y Permisos',
+    title: 'Diseño a Medida, Cálculo y Permisos DOM',
+    headline: 'Proyecto completo listo para aprobar y construir sin observaciones.',
+    description:
+      'Desarrollamos arquitectura personalizada, ingeniería sísmica y gestión municipal completa adaptada a tu presupuesto real.',
+    image: STAGE_2_IMAGE,
+    imageAlt: 'Estructura de hormigón armado y planos de cálculo sísmico en obra',
+    specs: [
+      'Anteproyecto arquitectónico y modelado 3D a medida',
+      'Cálculo estructural antisísmico norma NCh 433',
+      'Expediente y tramitación de permisos municipales (DOM)',
+    ],
+  },
+  {
+    id: 'casa',
+    number: '03',
+    category: 'Vivienda Principal',
+    shortTitle: 'Construcción de Casas',
+    title: 'Casas Mediterráneas y Contemporáneas',
+    headline: 'Construcción sólida en hormigón, acero o madera bajo supervisión directa.',
+    description:
+      'Ejecutamos viviendas completas desde la obra gruesa hasta interiorismo y accesos vehiculares con estándares térmicos superiores.',
+    image: ANGLE_DRIVEWAY_IMAGE,
+    imageAlt: 'Casa mediterránea terminada con accesos en adoquín y termopanel',
+    specs: [
+      'Obra gruesa en hormigón armado, acero o madera',
+      'Envolvente térmica EIFS, piedra natural y termopanel RPT',
+      'Cocina, baños, iluminación y accesos vehiculares terminados',
     ],
   },
   {
     id: 'quincho',
-    number: '02',
-    shortTitle: 'Quinchos y Encuentro',
-    title: 'Construcción de Quinchos y Espacios de Encuentro',
-    headline: 'El corazón social de la parcela, conectado sin barreras al living y la terraza.',
+    number: '04',
+    category: 'Vida Exterior',
+    shortTitle: 'Quinchos y Exteriores',
+    title: 'Quinchos Equipados, Terrazas y Paisajismo',
+    headline: 'Espacios sociales conectados a la residencia para disfrutar todo el año.',
     description:
-      'Proyectamos quinchos de obra sólida integrados a la línea arquitectónica de la vivienda. Pérgolas de acero negro y madera nativa, campanas silenciosas de alta extracción, parrillas en acero inoxidable 304, hornos de barro o pizza, barras en cuarzo y chimeneas exteriores.',
+      'Construimos quinchos abiertos o cerrados, terrazas en piedra y obras exteriores que extienden tu hogar hacia el entorno natural.',
     image: QUINCHO_SERVICE_IMAGE,
     imageAlt: 'Quincho moderno equipado con pérgola de acero y madera conectado a terraza',
     specs: [
-      'Conexión fluida entre cocina interior, terraza en travertino y quincho',
-      'Pérgolas bioclimáticas o en roble impregnado con iluminación LED cálida',
-      'Equipamiento completo en acero inoxidable, mesones de granito y cava',
+      'Quinchos en obra sólida con parrilla inox y campana',
+      'Pérgolas de acero/roble, terrazas en travertino y decks',
+      'Cierres perimetrales, portones y caminos en piedra o adoquín',
     ],
   },
   {
     id: 'piscina',
-    number: '03',
+    number: '05',
+    category: 'Piscinas y Agua',
     shortTitle: 'Piscinas y Mantención',
-    title: 'Construcción y Mantenimiento de Piscinas',
-    headline: 'Espejos de agua minimalistas en hormigón y servicio técnico continuo todo el año.',
+    title: 'Piscinas de Hormigón y Mantención',
+    headline: 'Espejos de agua minimalistas diseñados para durar con soporte continuo.',
     description:
-      'Construimos piscinas de hormigón armado impermeabilizadas con revestimiento de cuarzo o porcelanato técnico, playas húmedas para reposeras, nado contracorriente y bordes infinitos. Además, nuestro equipo de mantención programada asegura agua cristalina las 52 semanas del año.',
+      'Construimos piscinas de hormigón armado con playa húmeda o borde infinito, además de ofrecer mantención programada todo el año.',
     image: POOL_SERVICE_IMAGE,
     imageAlt: 'Piscina minimalista de hormigón con borde infinito y playa húmeda en parcela',
     specs: [
-      'Playas húmedas, escaleras integradas y bordes infinitos hacia el paisaje',
-      'Cloración salina automatizada, bombas de calor e iluminación subacuática',
-      'Plan de mantención mensual permanente post-entrega en V Región y RM',
+      'Vaso en hormigón armado con cuarzo o porcelanato',
+      'Cloración salina, bomba de calor e iluminación LED',
+      'Plan de mantención técnica permanente en V Región y RM',
+    ],
+  },
+  {
+    id: 'especiales',
+    number: '06',
+    category: 'Obras a Medida',
+    shortTitle: 'Ampliaciones y Proyectos',
+    title: 'Ampliaciones, Remodelaciones y Etapas',
+    headline: 'Soluciones constructivas puntuales según tus planos o necesidades.',
+    description:
+      'Si necesitas construir una segunda vivienda, ampliar tu casa actual o ejecutar una partida específica, cotizamos a la medida.',
+    image: HERO_MAIN_IMAGE,
+    imageAlt: 'Obra residencial integral terminada con terraza, piscina y jardín',
+    specs: [
+      'Casas de invitados, talleres, estudios o bodegas',
+      'Ampliaciones estructurales y terrazas techadas a medida',
+      'Presupuesto directo sobre planos propios o referencias',
     ],
   },
 ];

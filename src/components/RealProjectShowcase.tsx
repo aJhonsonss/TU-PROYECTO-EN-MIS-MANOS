@@ -129,7 +129,7 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
   return (
     <section
       id="obra-real"
-      className="w-full max-w-full flex-1 overflow-hidden bg-[#141311] text-[#F6F4EF] pt-16 pb-4 lg:pt-[68px] lg:pb-4 flex flex-col justify-center border-t border-white/10"
+      className="w-full max-w-full flex-1 overflow-hidden bg-[#141311] text-[#F6F4EF] pt-[82px] pb-12 sm:pt-24 sm:pb-14 lg:pt-[68px] lg:pb-4 flex flex-col justify-center border-t border-white/10"
     >
       <div className="max-w-[1360px] w-full max-w-full mx-auto px-4 sm:px-6 md:px-10">
         {/* Compact Viewport-Fitted Header */}
@@ -284,8 +284,8 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
                   </div>
                 </div>
 
-                {/* Zero-Dip Cross-Fade Photo Viewport (Full Widescreen object-cover, Zero Slide Overlap) */}
-                <div className="relative h-[240px] sm:h-[290px] lg:h-[clamp(250px,41vh,420px)] bg-[#0B0A09] overflow-hidden select-none">
+                {/* Zero-Dip Cross-Fade Photo Viewport (Natural Landscape Perspective on Mobile & Desktop) */}
+                <div className="relative aspect-[16/10] sm:aspect-auto sm:h-[300px] lg:h-[clamp(250px,41vh,420px)] bg-[#0B0A09] overflow-hidden select-none">
                   {/* Steady Base Frame Underneath */}
                   <img
                     src={baseSlide.image}
@@ -416,7 +416,7 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
                       >
                         <div
                           className={`relative overflow-hidden bg-[#0D0C0B] shrink-0 ${
-                            isFinale ? 'w-24 sm:w-28 h-full min-h-[54px]' : 'h-9 sm:h-11 w-full'
+                            isFinale ? 'w-20 sm:w-28 h-full min-h-[54px]' : 'h-14 sm:h-11 w-full'
                           }`}
                         >
                           <img
@@ -506,7 +506,7 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
                       draggingSplitRef.current = true;
                       updateSplitFromClientX(e.clientX);
                     }}
-                    className="relative w-full h-[270px] sm:h-[340px] lg:h-[clamp(300px,46vh,460px)] overflow-hidden cursor-ew-resize select-none touch-none"
+                    className="relative w-full aspect-[16/10] sm:aspect-auto sm:h-[340px] lg:h-[clamp(300px,46vh,460px)] overflow-hidden cursor-ew-resize select-none touch-none"
                   >
                     {/* Right / Underneath layer: Image 1 (Inicio de Obra) */}
                     <img
@@ -532,10 +532,10 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
                     </div>
 
                     {/* Clean Corner State Labels */}
-                    <span className="pointer-events-none absolute top-3 left-3 z-20 px-2.5 py-1 rounded-lg bg-[#141311]/85 border border-[#C8A878]/50 font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#C8A878]">
+                    <span className="pointer-events-none absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-20 px-2 sm:px-2.5 py-1 rounded-lg bg-[#141311]/85 border border-[#C8A878]/50 font-mono-tech text-[9px] sm:text-[10px] uppercase tracking-[0.1em] sm:tracking-[0.12em] text-[#C8A878]">
                       {activeComparison.afterLabel}
                     </span>
-                    <span className="pointer-events-none absolute top-3 right-3 z-20 px-2.5 py-1 rounded-lg bg-[#141311]/85 border border-white/20 font-mono-tech text-[10px] uppercase tracking-[0.12em] text-[#F6F4EF]">
+                    <span className="pointer-events-none absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-20 px-2 sm:px-2.5 py-1 rounded-lg bg-[#141311]/85 border border-white/20 font-mono-tech text-[9px] sm:text-[10px] uppercase tracking-[0.1em] sm:tracking-[0.12em] text-[#F6F4EF]">
                       {activeComparison.beforeLabel}
                     </span>
 
@@ -544,19 +544,16 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
                       className="absolute top-0 bottom-0 w-[2px] bg-[#C8A878] pointer-events-none shadow-lg z-20"
                       style={{ left: `${splitPercent}%` }}
                     >
-                      <div className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-[#141311] border-2 border-[#C8A878] text-[#F6F4EF] flex items-center justify-center shadow-xl">
+                      <div className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#141311] border-2 border-[#C8A878] text-[#F6F4EF] flex items-center justify-center shadow-xl">
                         <MoveHorizontal className="w-4 h-4 text-[#C8A878]" />
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Bottom Moving Selector Controls */}
-                <div className="px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-mono-tech text-[11px] uppercase tracking-[0.12em] text-[#C8A878]">
-                    ← {activeComparison.afterLabel} ({Math.round(splitPercent)}%)
-                  </span>
-                  <div className="flex items-center gap-3">
+                {/* Bottom Moving Selector Controls (Full-Width Range on Mobile) */}
+                <div className="px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="order-1 sm:order-2 flex items-center w-full sm:w-auto">
                     <input
                       type="range"
                       min={0}
@@ -564,12 +561,17 @@ export default function RealProjectShowcase({ onScheduleClick }: RealProjectShow
                       value={Math.round(splitPercent)}
                       onChange={(e) => setSplitPercent(Number(e.target.value))}
                       aria-label="Selector deslizable entre inicio de obra y proyecto terminado"
-                      className="w-36 sm:w-56 accent-[#C8A878] cursor-pointer"
+                      className="w-full sm:w-56 accent-[#C8A878] cursor-pointer"
                     />
                   </div>
-                  <span className="font-mono-tech text-[11px] uppercase tracking-[0.12em] text-[#A39A8E]">
-                    {activeComparison.beforeLabel} →
-                  </span>
+                  <div className="order-2 sm:order-1 flex items-center justify-between sm:contents gap-2">
+                    <span className="font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.1em] sm:tracking-[0.12em] text-[#C8A878]">
+                      ← {activeComparison.afterLabel} ({Math.round(splitPercent)}%)
+                    </span>
+                    <span className="order-3 font-mono-tech text-[10px] sm:text-[11px] uppercase tracking-[0.1em] sm:tracking-[0.12em] text-[#A39A8E]">
+                      {activeComparison.beforeLabel} →
+                    </span>
+                  </div>
                 </div>
               </div>
 

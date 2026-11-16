@@ -47,6 +47,17 @@ function ParcelMapInner({
   const [locatingGps, setLocatingGps] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const lastGeocodedCommuneRef = useRef<string>('');
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = mapContainerRef.current;
+    if (!el) return;
+    const handleWheelBubble = (event: WheelEvent) => {
+      event.preventDefault();
+    };
+    el.addEventListener('wheel', handleWheelBubble, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheelBubble);
+  }, []);
 
   const searchLocationOnMap = async (query: string, zoomLevel: number, markExplicit: boolean) => {
     if (!placesLib || !map) return;
@@ -193,8 +204,13 @@ function ParcelMapInner({
         </button>
       </div>
 
-      {/* Interactive Google Map Container with Explicit Height */}
-      <div className="relative w-full h-[168px] sm:h-[185px] lg:h-[clamp(160px,22vh,205px)] rounded-xl overflow-hidden border border-white/15 bg-[#11100E]">
+      {/* Interactive Google Map Container with Touch-Friendly Height on Mobile */}
+      <div
+        ref={mapContainerRef}
+        data-lenis-prevent
+        data-lenis-prevent-wheel
+        className="relative w-full h-[205px] sm:h-[195px] lg:h-[clamp(160px,22vh,205px)] rounded-xl overflow-hidden border border-white/15 bg-[#11100E] overscroll-contain"
+      >
         <GoogleMap
           className="w-full h-full"
           mapId="DEMO_MAP_ID"
@@ -252,19 +268,19 @@ function ParcelMapInner({
         </div>
 
         {/* Bottom Instruction & Exact Coordinate Readout */}
-        <div className="pointer-events-none absolute inset-x-2 bottom-2 z-10 flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-[#141311]/88 backdrop-blur-md border border-white/12 text-[11px] text-[#E6E0D6]">
-          <span className="inline-flex items-center gap-1.5 truncate">
+        <div className="pointer-events-none absolute inset-x-2 bottom-2 z-10 flex items-center justify-between gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#141311]/88 backdrop-blur-md border border-white/12 text-[10px] sm:text-[11px] text-[#E6E0D6]">
+          <span className="inline-flex items-center gap-1.5 min-w-0 truncate">
             <Crosshair className="w-3.5 h-3.5 text-[#C49A6C] shrink-0" />
             <span className="truncate">
               {statusMessage ||
                 (hasExplicitPin
-                  ? 'Pin fijado · Puedes arrastrar o hacer clic para ajustar'
-                  : 'Haz clic o arrastra el cursor sobre tu parcela')}
+                  ? 'Pin fijado · Arrastra para ajustar'
+                  : 'Toca o arrastra sobre tu parcela')}
             </span>
           </span>
           {pinLocation && (
             <span className="font-mono-tech text-[10px] text-[#DFC8AA] tabular-nums shrink-0">
-              {pinLocation.lat.toFixed(5)}, {pinLocation.lng.toFixed(5)}
+              {pinLocation.lat.toFixed(4)}, {pinLocation.lng.toFixed(4)}
             </span>
           )}
         </div>

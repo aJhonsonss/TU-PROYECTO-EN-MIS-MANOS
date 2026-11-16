@@ -15,12 +15,13 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { CHILE_REGIONS, RegionOption } from '../data/projectData';
+import { CHILE_REGIONS, RegionOption, ServicePillar } from '../data/projectData';
 import { RevealBlock } from './MotionPrimitives';
 import ParcelLocationMap, { Coordinates } from './ParcelLocationMap';
+import LegalTermsModal, { LegalTab } from './LegalTermsModal';
 
 interface QuoteSchedulerProps {
-  preselectedAddon?: 'casa' | 'quincho' | 'piscina' | null;
+  preselectedAddon?: ServicePillar['id'] | null;
 }
 
 interface AttachedReference {
@@ -30,6 +31,8 @@ interface AttachedReference {
   isImage: boolean;
   previewUrl: string | null;
 }
+
+type ContactMethod = 'whatsapp' | 'llamada' | 'correo';
 
 interface QuoteState {
   hasLand: 'si' | 'en-busqueda';
@@ -47,8 +50,16 @@ interface QuoteState {
   name: string;
   email: string;
   phone: string;
+  contactMethods: ContactMethod[];
   preferredTime: string;
+  acceptedTerms: boolean;
 }
+
+const CONTACT_METHOD_OPTIONS: { id: ContactMethod; label: string }[] = [
+  { id: 'whatsapp', label: 'WhatsApp' },
+  { id: 'llamada', label: 'Llamada' },
+  { id: 'correo', label: 'Correo' },
+];
 
 const PREFERRED_TIME_OPTIONS = [
   { id: 'manana', label: 'Mañana', hours: '09:30 - 12:30 hrs' },
@@ -78,10 +89,49 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function validatePhoneValue(rawPhone: string): string | null {
+  const trimmed = rawPhone.trim();
+  if (!trimmed) {
+    return 'Ingresa tu número de teléfono o WhatsApp.';
+  }
+  if (!/^[+\d\s()-]+$/.test(trimmed)) {
+    return 'Usa solo números, espacios o +56 (sin letras).';
+  }
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.length < 8 || digits.length > 15) {
+    return 'Debe tener entre 8 y 15 dígitos (ej. +56 9 8765 4321).';
+  }
+  if (/^(\d)\1+$/.test(digits)) {
+    return 'Ingresa un número de teléfono real.';
+  }
+  return null;
+}
+
+function validateEmailValue(rawEmail: string, required: boolean): string | null {
+  const trimmed = rawEmail.trim();
+  if (!trimmed) {
+    return required ? 'Ingresa tu correo para contactarte por este medio.' : null;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    return 'Formato de correo inválido (ej. nombre@correo.cl).';
+  }
+  return null;
+}
+
 export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps) {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [touched, setTouched] = useState({
+    name: false,
+    phone: false,
+    email: false,
+    contactMethods: false,
+    acceptedTerms: false,
+  });
+
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<LegalTab>('privacidad');
 
   const [communeMenuOpen, setCommuneMenuOpen] = useState(false);
   const [communeQuery, setCommuneQuery] = useState('');
@@ -109,7 +159,9 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
     name: '',
     email: '',
     phone: '',
+    contactMethods: ['whatsapp'],
     preferredTime: 'Mañana (09:30 - 12:30 hrs)',
+    acceptedTerms: false,
   });
 
   useEffect(() => {
@@ -125,10 +177,28 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
   }, []);
 
   useEffect(() => {
+    if (!preselectedAddon) return;
     if (preselectedAddon === 'quincho') {
       setForm((prev) => ({ ...prev, includeQuincho: true }));
     } else if (preselectedAddon === 'piscina') {
       setForm((prev) => ({ ...prev, includePool: true }));
+    } else if (preselectedAddon === 'terreno') {
+      setStep(1);
+    } else if (preselectedAddon === 'arquitectura') {
+      setForm((prev) => ({
+        ...prev,
+        projectNotes:
+          prev.projectNotes ||
+          'Requiero diseño arquitectónico a medida, cálculo estructural y tramitación de permisos municipales (DOM).',
+      }));
+    } else if (preselectedAddon === 'especiales') {
+      setForm((prev) => ({
+        ...prev,
+        projectNotes:
+          prev.projectNotes ||
+          'Requiero cotización de ampliación, remodelación o proyecto a medida en parcela.',
+      }));
+      setStep(4);
     }
   }, [preselectedAddon]);
 
@@ -212,22 +282,78 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
 
   const surfacePercent = ((form.surfaceM2 - 160) / (460 - 160)) * 100;
 
+  // Real-time field validation states
+  const nameError =
+    form.name.trim().length < 3 ? 'Ingresa tu nombre completo (mínimo 3 caracteres).' : null;
+  const phoneError = validatePhoneValue(form.phone);
+  const emailRequired = form.contactMethods.includes('correo');
+  const emailError = validateEmailValue(form.email, emailRequired);
+  const contactMethodError =
+    form.contactMethods.length === 0 ? 'Selecciona al menos un método de contacto.' : null;
+  const termsError = !form.acceptedTerms
+    ? 'Debes aceptar los términos y la política de protección de datos (Ley N° 21.719).'
+    : null;
+
+  const hasValidContactChannel =
+    phoneError === null || (form.email.trim().length > 0 && emailError === null);
+  const isStep5Valid =
+    !nameError &&
+    !phoneError &&
+    !emailError &&
+    !contactMethodError &&
+    !termsError &&
+    hasValidContactChannel;
+
+  const toggleContactMethod = (method: ContactMethod) => {
+    setTouched((prev) => ({ ...prev, contactMethods: true }));
+    setErrorMsg(null);
+    setForm((prev) => {
+      const exists = prev.contactMethods.includes(method);
+      const next = exists
+        ? prev.contactMethods.filter((m) => m !== method)
+        : [...prev.contactMethods, method];
+      return { ...prev, contactMethods: next };
+    });
+  };
+
+  const openLegalModal = (tab: LegalTab) => {
+    setLegalModalTab(tab);
+    setLegalModalOpen(true);
+  };
+
   const validateAndSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setTouched({
+      name: true,
+      phone: true,
+      email: true,
+      contactMethods: true,
+      acceptedTerms: true,
+    });
     setErrorMsg(null);
 
-    if (!form.name.trim() || form.name.trim().length < 3) {
-      setErrorMsg('Ingresa tu nombre completo para coordinar la reunión.');
+    if (nameError) {
+      setErrorMsg(nameError);
       return;
     }
-    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
-    if (!emailValid) {
-      setErrorMsg('Ingresa un correo electrónico válido.');
+    if (phoneError) {
+      setErrorMsg(phoneError);
       return;
     }
-    const digits = form.phone.replace(/\D/g, '');
-    if (digits.length < 8) {
-      setErrorMsg('Ingresa un teléfono de contacto válido (ej. +56 9 8765 4321).');
+    if (contactMethodError) {
+      setErrorMsg(contactMethodError);
+      return;
+    }
+    if (emailError) {
+      setErrorMsg(emailError);
+      return;
+    }
+    if (!hasValidContactChannel) {
+      setErrorMsg('Ingresa un teléfono válido o correo electrónico para poder contactarte.');
+      return;
+    }
+    if (termsError) {
+      setErrorMsg(termsError);
       return;
     }
 
@@ -237,9 +363,9 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
   return (
     <section
       id="cotizador"
-      className="w-full max-w-full overflow-x-clip bg-[#141311] text-[#F6F4EF] pt-[74px] pb-10 lg:pt-[76px] lg:pb-6 lg:min-h-[100vh] flex flex-col justify-center"
+      className="w-full max-w-full overflow-x-clip bg-[#141311] text-[#F6F4EF] pt-[82px] pb-12 sm:pt-24 sm:pb-14 lg:pt-[76px] lg:pb-6 lg:min-h-[100vh] flex flex-col justify-center"
     >
-      <div className="max-w-[1360px] w-full max-w-full mx-auto px-4 sm:px-6 md:px-10">
+      <div className="max-w-[1360px] w-full max-w-full mx-auto px-3.5 sm:px-6 md:px-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center w-full max-w-full">
           {/* Left Column: Value Proposition */}
           <RevealBlock className="lg:col-span-5 min-w-0 w-full">
@@ -277,7 +403,7 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
           {/* Right Column: Compact Multi-Step Configurator Fitted to Single Viewport */}
           <RevealBlock
             delay={0.08}
-            className="lg:col-span-7 min-w-0 w-full max-w-full rounded-2xl bg-[#1A1815] border border-white/12 p-4 sm:p-5 lg:p-6"
+            className="lg:col-span-7 min-w-0 w-full max-w-full rounded-2xl bg-[#1A1815] border border-white/12 p-3.5 sm:p-5 lg:p-6"
           >
             {submitted ? (
               <motion.div
@@ -309,8 +435,22 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
                 </p>
 
                 <div className="p-4 rounded-xl bg-[#141311] border border-white/10 text-xs text-[#B8B0A4] space-y-1.5">
-                  <div>
-                    Correo de respaldo: <span className="text-[#F6F4EF]">{form.email}</span>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <div>
+                      Contacto preferido:{' '}
+                      <span className="text-[#F6F4EF]">
+                        {form.contactMethods
+                          .map(
+                            (m) => CONTACT_METHOD_OPTIONS.find((opt) => opt.id === m)?.label ?? m
+                          )
+                          .join(', ')}
+                      </span>
+                    </div>
+                    {form.email.trim() && (
+                      <div>
+                        Correo: <span className="text-[#F6F4EF]">{form.email}</span>
+                      </div>
+                    )}
                   </div>
                   {form.sectorDetail.trim() && (
                     <div>
@@ -395,7 +535,7 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
             ) : (
               <form onSubmit={validateAndSubmit} noValidate>
                 {/* Step Indicator Bar (5 Steps) */}
-                <div className="grid grid-cols-5 gap-1.5 sm:gap-2.5 mb-4 sm:mb-5">
+                <div className="grid grid-cols-5 gap-1 sm:gap-2.5 mb-4 sm:mb-5">
                   {STEPS.map((s) => (
                     <button
                       key={s.num}
@@ -405,7 +545,7 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
                         setCommuneMenuOpen(false);
                         setStep(s.num);
                       }}
-                      className={`text-left pb-2 border-b-2 transition-colors cursor-pointer ${
+                      className={`text-left pb-2 border-b-2 transition-colors cursor-pointer min-w-0 ${
                         step === s.num
                           ? 'border-[#C49A6C] text-[#F6F4EF]'
                           : step > s.num
@@ -416,7 +556,7 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
                       <span className="font-mono-tech text-[10px] sm:text-[11px] block">
                         0{s.num}
                       </span>
-                      <span className="text-[11px] sm:text-xs font-medium whitespace-nowrap truncate block">
+                      <span className="text-[10px] sm:text-xs font-medium tracking-tight sm:tracking-normal whitespace-nowrap truncate block">
                         {s.label}
                       </span>
                     </button>
@@ -588,7 +728,11 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
                                     )}
                                   </div>
 
-                                  <div className="p-2 max-h-[190px] overflow-y-auto">
+                                  <div
+                                    data-lenis-prevent
+                                    data-lenis-prevent-wheel
+                                    className="p-2 max-h-[190px] overflow-y-auto overscroll-contain"
+                                  >
                                     {filteredCommunes.length === 0 ? (
                                       <div className="py-5 text-center text-xs text-[#8E867B]">
                                         No encontramos &ldquo;{communeQuery}&rdquo; en{' '}
@@ -710,7 +854,7 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
                           <span className="block text-sm font-medium text-[#F6F4EF] mb-3">
                             Programa de dormitorios
                           </span>
-                          <div className="grid grid-cols-4 gap-2.5">
+                          <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5">
                             {[3, 4, 5, 6].map((count) => {
                               const isActive = form.bedrooms === count;
                               return (
@@ -718,7 +862,7 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
                                   key={count}
                                   type="button"
                                   onClick={() => setForm({ ...form, bedrooms: count })}
-                                  className={`relative py-3 rounded-xl text-center border text-sm font-mono-tech cursor-pointer transition-colors ${
+                                  className={`relative py-2.5 sm:py-3 rounded-xl text-center border text-xs sm:text-sm font-mono-tech cursor-pointer transition-colors ${
                                     isActive
                                       ? 'text-[#141311] border-[#C49A6C] font-semibold'
                                       : 'bg-[#141311] text-[#D5CEC3] border-white/15 hover:border-white/30'
@@ -948,67 +1092,166 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
                       </div>
                     )}
 
-                    {/* STEP 5: AGENDA */}
+                    {/* STEP 5: AGENDA WITH REAL-TIME VALIDATION */}
                     {step === 5 && (
-                      <div className="space-y-3.5">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
-                            <label
-                              htmlFor="lead-name"
-                              className="block text-xs font-medium text-[#D5CEC3] mb-1.5"
-                            >
-                              Nombre completo
-                            </label>
+                            <div className="flex items-center justify-between mb-1">
+                              <label
+                                htmlFor="lead-name"
+                                className="text-xs font-medium text-[#D5CEC3]"
+                              >
+                                Nombre completo *
+                              </label>
+                              {!nameError && form.name.trim() && (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-[#7FD19E]" />
+                              )}
+                            </div>
                             <input
                               id="lead-name"
                               type="text"
                               value={form.name}
-                              onChange={(e) => setForm({ ...form, name: e.target.value })}
+                              onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
+                              onChange={(e) => {
+                                setErrorMsg(null);
+                                setTouched((prev) => ({ ...prev, name: true }));
+                                setForm({ ...form, name: e.target.value });
+                              }}
+                              aria-invalid={touched.name && Boolean(nameError)}
                               placeholder="Ej. Sebastián Guzmán"
-                              className="w-full px-3.5 py-2.5 rounded-xl bg-[#141311] border border-white/15 text-sm text-[#F6F4EF] placeholder:text-[#6B645B] focus:outline-none focus:border-[#C49A6C]"
+                              className={`w-full px-3.5 py-2 rounded-xl bg-[#141311] border text-sm text-[#F6F4EF] placeholder:text-[#6B645B] focus:outline-none transition-colors ${
+                                touched.name && nameError
+                                  ? 'border-[#E07A7A] focus:border-[#E07A7A]'
+                                  : !nameError && form.name.trim()
+                                    ? 'border-[#7FD19E]/45 focus:border-[#C49A6C]'
+                                    : 'border-white/15 focus:border-[#C49A6C]'
+                              }`}
                             />
+                            {touched.name && nameError && (
+                              <p className="mt-1 text-[11px] text-[#F2A7A7]">{nameError}</p>
+                            )}
                           </div>
 
                           <div>
-                            <label
-                              htmlFor="lead-phone"
-                              className="block text-xs font-medium text-[#D5CEC3] mb-1.5"
-                            >
-                              Teléfono / WhatsApp
-                            </label>
+                            <div className="flex items-center justify-between mb-1">
+                              <label
+                                htmlFor="lead-phone"
+                                className="text-xs font-medium text-[#D5CEC3]"
+                              >
+                                Teléfono / WhatsApp *
+                              </label>
+                              {!phoneError && form.phone.trim() && (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-[#7FD19E]">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  Válido
+                                </span>
+                              )}
+                            </div>
                             <input
                               id="lead-phone"
                               type="tel"
                               value={form.phone}
-                              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                              onBlur={() => setTouched((prev) => ({ ...prev, phone: true }))}
+                              onChange={(e) => {
+                                setErrorMsg(null);
+                                setTouched((prev) => ({ ...prev, phone: true }));
+                                setForm({ ...form, phone: e.target.value });
+                              }}
+                              aria-invalid={touched.phone && Boolean(phoneError)}
                               placeholder="+56 9 8765 4321"
-                              className="w-full px-3.5 py-2.5 rounded-xl bg-[#141311] border border-white/15 text-sm text-[#F6F4EF] placeholder:text-[#6B645B] focus:outline-none focus:border-[#C49A6C]"
+                              className={`w-full px-3.5 py-2 rounded-xl bg-[#141311] border text-sm text-[#F6F4EF] placeholder:text-[#6B645B] focus:outline-none transition-colors ${
+                                touched.phone && phoneError
+                                  ? 'border-[#E07A7A] focus:border-[#E07A7A]'
+                                  : !phoneError && form.phone.trim()
+                                    ? 'border-[#7FD19E]/45 focus:border-[#C49A6C]'
+                                    : 'border-white/15 focus:border-[#C49A6C]'
+                              }`}
                             />
+                            {touched.phone && phoneError && (
+                              <p className="mt-1 text-[11px] text-[#F2A7A7]">{phoneError}</p>
+                            )}
                           </div>
                         </div>
 
-                        <div>
-                          <label
-                            htmlFor="lead-email"
-                            className="block text-xs font-medium text-[#D5CEC3] mb-1.5"
-                          >
-                            Correo electrónico
-                          </label>
-                          <input
-                            id="lead-email"
-                            type="email"
-                            value={form.email}
-                            onChange={(e) => setForm({ ...form, email: e.target.value })}
-                            placeholder="sebastian@empresa.cl"
-                            className="w-full px-3.5 py-2.5 rounded-xl bg-[#141311] border border-white/15 text-sm text-[#F6F4EF] placeholder:text-[#6B645B] focus:outline-none focus:border-[#C49A6C]"
-                          />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label
+                                htmlFor="lead-email"
+                                className="text-xs font-medium text-[#D5CEC3]"
+                              >
+                                Correo electrónico {emailRequired ? '*' : '(opcional)'}
+                              </label>
+                              {!emailError && form.email.trim() && (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-[#7FD19E]" />
+                              )}
+                            </div>
+                            <input
+                              id="lead-email"
+                              type="email"
+                              value={form.email}
+                              onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
+                              onChange={(e) => {
+                                setErrorMsg(null);
+                                setTouched((prev) => ({ ...prev, email: true }));
+                                setForm({ ...form, email: e.target.value });
+                              }}
+                              aria-invalid={(touched.email || emailRequired) && Boolean(emailError)}
+                              placeholder="sebastian@empresa.cl"
+                              className={`w-full px-3.5 py-2 rounded-xl bg-[#141311] border text-sm text-[#F6F4EF] placeholder:text-[#6B645B] focus:outline-none transition-colors ${
+                                (touched.email || (touched.contactMethods && emailRequired)) &&
+                                emailError
+                                  ? 'border-[#E07A7A] focus:border-[#E07A7A]'
+                                  : !emailError && form.email.trim()
+                                    ? 'border-[#7FD19E]/45 focus:border-[#C49A6C]'
+                                    : 'border-white/15 focus:border-[#C49A6C]'
+                              }`}
+                            />
+                            {(touched.email || (touched.contactMethods && emailRequired)) &&
+                              emailError && (
+                                <p className="mt-1 text-[11px] text-[#F2A7A7]">{emailError}</p>
+                              )}
+                          </div>
+
+                          <div>
+                            <span className="block text-xs font-medium text-[#D5CEC3] mb-1">
+                              ¿Por qué medio prefieres que te contactemos? *
+                            </span>
+                            <div className="grid grid-cols-3 gap-1.5">
+                              {CONTACT_METHOD_OPTIONS.map((option) => {
+                                const isActive = form.contactMethods.includes(option.id);
+                                return (
+                                  <button
+                                    key={option.id}
+                                    type="button"
+                                    onClick={() => toggleContactMethod(option.id)}
+                                    aria-pressed={isActive}
+                                    className={`px-1.5 sm:px-2 py-2 rounded-xl text-[11px] sm:text-xs font-medium border transition-colors cursor-pointer flex items-center justify-center gap-1 whitespace-nowrap ${
+                                      isActive
+                                        ? 'bg-[#25221E] border-[#C49A6C] text-[#F6F4EF]'
+                                        : 'bg-[#141311] border-white/12 text-[#9E968B] hover:border-white/25'
+                                    }`}
+                                  >
+                                    {isActive && <Check className="w-3 h-3 text-[#C49A6C] shrink-0" />}
+                                    <span>{option.label}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {contactMethodError && (
+                              <p className="mt-1 text-[11px] text-[#F2A7A7]" role="alert">
+                                {contactMethodError}
+                              </p>
+                            )}
+                          </div>
                         </div>
 
                         <div>
                           <span className="block text-xs font-medium text-[#D5CEC3] mb-1.5">
                             Horario preferido de contacto o visita
                           </span>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             {PREFERRED_TIME_OPTIONS.map((option) => {
                               const value = `${option.label} (${option.hours})`;
                               const isActive = form.preferredTime === value;
@@ -1017,7 +1260,7 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
                                   key={option.id}
                                   type="button"
                                   onClick={() => setForm({ ...form, preferredTime: value })}
-                                  className={`p-2.5 sm:p-3 rounded-xl text-left border transition-colors cursor-pointer ${
+                                  className={`p-2.5 rounded-xl text-left border transition-colors cursor-pointer ${
                                     isActive
                                       ? 'bg-[#25221E] border-[#C49A6C] text-[#F6F4EF]'
                                       : 'bg-[#141311] border-white/12 text-[#B8B0A4] hover:border-white/25'
@@ -1033,10 +1276,76 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
                           </div>
                         </div>
 
+                        {/* Consentimiento Chile Ley N° 19.628 & Ley N° 21.719 */}
+                        <div
+                          className={`rounded-xl border px-3 py-2.5 transition-colors ${
+                            touched.acceptedTerms && termsError
+                              ? 'bg-[#2A1818]/70 border-[#E07A7A]/70'
+                              : form.acceptedTerms
+                                ? 'bg-[#1D1B17] border-[#C49A6C]/55'
+                                : 'bg-[#141311] border-white/12'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <button
+                              id="lead-accept-terms"
+                              type="button"
+                              role="checkbox"
+                              aria-checked={form.acceptedTerms}
+                              aria-invalid={touched.acceptedTerms && Boolean(termsError)}
+                              onClick={() => {
+                                setErrorMsg(null);
+                                setTouched((prev) => ({ ...prev, acceptedTerms: true }));
+                                setForm((prev) => ({
+                                  ...prev,
+                                  acceptedTerms: !prev.acceptedTerms,
+                                }));
+                              }}
+                              className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center border transition-colors shrink-0 cursor-pointer ${
+                                form.acceptedTerms
+                                  ? 'bg-[#C49A6C] border-[#C49A6C] text-[#141311]'
+                                  : 'bg-[#141311] border-white/30 hover:border-[#C49A6C]'
+                              }`}
+                            >
+                              {form.acceptedTerms && <Check className="w-3 h-3 stroke-[3]" />}
+                            </button>
+
+                            <div className="text-[11px] leading-snug text-[#C9C1B6]">
+                              <label
+                                htmlFor="lead-accept-terms"
+                                className="cursor-pointer select-none"
+                              >
+                                Autorizo el tratamiento exclusivo de mis datos para evaluar mi
+                                proyecto y coordinar contacto directo, aceptando los{' '}
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => openLegalModal('terminos')}
+                                className="text-[#DFC8AA] underline underline-offset-2 hover:text-white cursor-pointer font-medium"
+                              >
+                                Términos y Condiciones
+                              </button>{' '}
+                              y la{' '}
+                              <button
+                                type="button"
+                                onClick={() => openLegalModal('privacidad')}
+                                className="text-[#DFC8AA] underline underline-offset-2 hover:text-white cursor-pointer font-medium"
+                              >
+                                Política de Protección de Datos (Ley N° 21.719)
+                              </button>
+                              .
+                            </div>
+                          </div>
+
+                          {touched.acceptedTerms && termsError && (
+                            <p className="mt-1.5 pl-6 text-[11px] text-[#F2A7A7]">{termsError}</p>
+                          )}
+                        </div>
+
                         {errorMsg && (
                           <div
                             role="alert"
-                            className="px-4 py-2 rounded-xl bg-[#461E1E] border border-[#C96B6B]/40 text-xs text-[#FAD4D4]"
+                            className="px-3.5 py-2 rounded-xl bg-[#461E1E] border border-[#C96B6B]/40 text-xs text-[#FAD4D4]"
                           >
                             {errorMsg}
                           </div>
@@ -1047,7 +1356,7 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
                 </AnimatePresence>
 
                 {/* Navigation Controls */}
-                <div className="mt-4 pt-3.5 border-t border-white/10 flex items-center justify-between gap-4">
+                <div className="mt-4 pt-3.5 border-t border-white/10 flex items-center justify-between gap-2.5 sm:gap-4">
                   {step > 1 ? (
                     <button
                       type="button"
@@ -1056,7 +1365,7 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
                         setCommuneMenuOpen(false);
                         setStep((s) => s - 1);
                       }}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium text-[#D5CEC3] border border-white/15 hover:text-white hover:border-white/30 cursor-pointer"
+                      className="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-medium text-[#D5CEC3] border border-white/15 hover:text-white hover:border-white/30 cursor-pointer shrink-0"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
                       <span>Anterior</span>
@@ -1074,7 +1383,7 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
                         setCommuneMenuOpen(false);
                         setStep((s) => s + 1);
                       }}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#F6F4EF] text-[#141311] text-xs font-semibold hover:bg-[#E4DFD3] transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-[#F6F4EF] text-[#141311] text-xs font-semibold hover:bg-[#E4DFD3] transition-colors cursor-pointer whitespace-nowrap"
                     >
                       <span>Continuar</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -1082,9 +1391,13 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
                   ) : (
                     <motion.button
                       type="submit"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C49A6C] text-[#141311] text-xs font-semibold hover:bg-[#D3AB7E] transition-colors cursor-pointer"
+                      whileHover={isStep5Valid ? { scale: 1.02 } : undefined}
+                      whileTap={isStep5Valid ? { scale: 0.98 } : undefined}
+                      className={`inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                        isStep5Valid
+                          ? 'bg-[#C49A6C] text-[#141311] hover:bg-[#D3AB7E]'
+                          : 'bg-[#C49A6C]/50 text-[#141311]/80 hover:bg-[#C49A6C]/70'
+                      }`}
                     >
                       <CalendarCheck2 className="w-4 h-4" />
                       <span>Enviar proyecto y agendar</span>
@@ -1096,6 +1409,17 @@ export default function QuoteScheduler({ preselectedAddon }: QuoteSchedulerProps
           </RevealBlock>
         </div>
       </div>
+
+      <LegalTermsModal
+        open={legalModalOpen}
+        initialTab={legalModalTab}
+        onClose={() => setLegalModalOpen(false)}
+        onAcceptAndClose={() => {
+          setErrorMsg(null);
+          setTouched((prev) => ({ ...prev, acceptedTerms: true }));
+          setForm((prev) => ({ ...prev, acceptedTerms: true }));
+        }}
+      />
     </section>
   );
 }

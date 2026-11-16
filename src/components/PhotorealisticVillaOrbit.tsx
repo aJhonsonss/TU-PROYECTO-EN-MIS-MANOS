@@ -129,7 +129,7 @@ export default function PhotorealisticVillaOrbit({
       />
 
       {/* Flex-Centered Soft Translucent Explanatory Caption Over Photo */}
-      <div className="pointer-events-none absolute inset-x-3 bottom-3 z-20 flex items-center justify-center">
+      <div className="pointer-events-none absolute inset-x-2.5 bottom-2.5 sm:inset-x-3 sm:bottom-3 z-20 flex items-center justify-center">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeZone.id}
@@ -137,9 +137,9 @@ export default function PhotorealisticVillaOrbit({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.35 }}
-            className="px-4 py-2.5 rounded-xl bg-[#141311]/82 backdrop-blur-md border border-white/15 text-xs text-[#F2EDE4] text-center max-w-[min(36rem,calc(100%-0.5rem))] shadow-[0_8px_24px_rgba(0,0,0,0.45)]"
+            className="px-3 py-1.5 sm:px-4 sm:py-2.5 rounded-xl bg-[#141311]/84 backdrop-blur-md border border-white/15 text-[11px] sm:text-xs leading-snug text-[#F2EDE4] text-center max-w-[min(36rem,100%)] shadow-[0_8px_24px_rgba(0,0,0,0.45)]"
           >
-            <span className="text-[#DFC8AA] font-medium mr-2">{captionTitle}:</span>
+            <span className="text-[#DFC8AA] font-medium mr-1.5">{captionTitle}:</span>
             <span className="text-[#EBE6DD]">{captionText}</span>
           </motion.div>
         </AnimatePresence>
