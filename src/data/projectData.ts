@@ -68,19 +68,19 @@ export interface TeamDiscipline {
   guarantee: string;
 }
 
-export const HERO_MAIN_IMAGE = '/src/assets/images/hero_quincho_piscina_natural_1794741217496.jpg';
-export const ANGLE_TERRACE_IMAGE = '/src/assets/images/hero_terraza_piscina_natural_1794741217016.jpg';
-export const ANGLE_DRIVEWAY_IMAGE = '/src/assets/images/hero_acceso_patente_natural_1794741217456.jpg';
+export const HERO_MAIN_IMAGE = '/assets/images/hero_quincho_piscina_natural_1794741217496.jpg';
+export const ANGLE_TERRACE_IMAGE = '/assets/images/hero_terraza_piscina_natural_1794741217016.jpg';
+export const ANGLE_DRIVEWAY_IMAGE = '/assets/images/hero_acceso_patente_natural_1794741217456.jpg';
 
-export const STAGE_1_IMAGE = '/src/assets/images/stage_1_terreno_algarrobo_1794668442626.jpg';
-export const STAGE_2_IMAGE = '/src/assets/images/stage_2_obra_gruesa_1794668443074.jpg';
-export const STAGE_3_IMAGE = '/src/assets/images/stage_3_muros_termopanel_1794668444133.jpg';
+export const STAGE_1_IMAGE = '/assets/images/stage_1_terreno_algarrobo_1794668442626.jpg';
+export const STAGE_2_IMAGE = '/assets/images/stage_2_obra_gruesa_1794668443074.jpg';
+export const STAGE_3_IMAGE = '/assets/images/stage_3_muros_termopanel_1794668444133.jpg';
 export const STAGE_4_IMAGE = HERO_MAIN_IMAGE;
 
-export const INTERIOR_TOUR_IMAGE = '/src/assets/images/interior_living_panoramic_1794667746412.jpg';
-export const QUINCHO_SERVICE_IMAGE = '/src/assets/images/service_quincho_terrace_1794667745553.jpg';
-export const POOL_SERVICE_IMAGE = '/src/assets/images/service_infinity_pool_1794667746112.jpg';
-export const CEO_PORTRAIT_IMAGE = '/src/assets/images/antonio_exacto_natural_obra_1794839571230.jpg';
+export const INTERIOR_TOUR_IMAGE = '/assets/images/interior_living_panoramic_1794667746412.jpg';
+export const QUINCHO_SERVICE_IMAGE = '/assets/images/service_quincho_terrace_1794667745553.jpg';
+export const POOL_SERVICE_IMAGE = '/assets/images/service_infinity_pool_1794667746112.jpg';
+export const CEO_PORTRAIT_IMAGE = '/assets/images/antonio_exacto_natural_obra_1794839571230.jpg';
 
 export const ORBIT_ANGLES: OrbitAngle[] = [
   {
@@ -605,9 +605,9 @@ export const CHILE_REGIONS: RegionOption[] = [
 ];
 
 export const REAL_BUILT_EXTERIOR_ENHANCED =
-  '/src/assets/images/story_09_real_facade_finished_1794753618996.jpg';
+  '/assets/images/story_09_real_facade_finished_1794753618996.jpg';
 export const REAL_BUILT_INTERIOR_ENHANCED =
-  '/src/assets/images/real_project_finished_interior_1794669210117.jpg';
+  '/assets/images/real_project_finished_interior_1794669210117.jpg';
 
 export interface RealProjectStorySlide {
   id: string;
@@ -631,7 +631,7 @@ export const REAL_PROJECT_STORY_SLIDES: RealProjectStorySlide[] = [
     caption:
       'Tabiquería estructural revestida en tablero OSB + membrana hidrófuga respirable Matwrap en todo el perímetro bajo bosque de pinos costeros.',
     technicalNote: 'Membrana Matwrap · Deck en pino IPV · Ventana proyectada en voladizo',
-    image: '/src/assets/images/story_01_matwrap_forest_1794752083985.jpg',
+    image: '/assets/images/story_01_matwrap_forest_1794752083985.jpg',
     imageAlt: 'Obra real revestida en membrana blanca Matwrap con terraza frontal rodeada de pinos',
     aspectHint: 'landscape',
   },
@@ -655,7 +655,7 @@ export const REAL_PROJECT_STORY_SLIDES: RealProjectStorySlide[] = [
     caption:
       'El volumen central se eleva sobre la crujía de dormitorios con envigado robusto a la vista y gran vano hacia la terraza panorámica.',
     technicalNote: 'Altura libre 4,2 m · Madera impregnada estructural',
-    image: '/src/assets/images/story_03_doble_altura_wide_1794750911961.jpg',
+    image: '/assets/images/story_03_doble_altura_wide_1794750911961.jpg',
     imageAlt: 'Vista interior de doble altura con vigas a la vista y andamios de terminación',
     aspectHint: 'landscape',
   },
@@ -691,7 +691,7 @@ export const REAL_PROJECT_STORY_SLIDES: RealProjectStorySlide[] = [
     caption:
       'Conformación del corredor distribuidor hacia dormitorios con cielos empastados, descuelgues de iluminación y marcos en madera sólida.',
     technicalNote: 'Corredor central recto · Tabiquería acústica entre dormitorios',
-    image: '/src/assets/images/story_pasillo_obra_wide_1794754034139.jpg',
+    image: '/assets/images/story_pasillo_obra_wide_1794754034139.jpg',
     imageAlt: 'Pasillo interior en construcción con muros en pino y cielo preparado para luminarias',
     aspectHint: 'landscape',
   },
@@ -727,7 +727,7 @@ export const REAL_PROJECT_STORY_SLIDES: RealProjectStorySlide[] = [
     caption:
       'Eje distribuidor revestido íntegramente en madera vertical con piso continuo cálido y serie lineal de focos cilíndricos negros LED 3000K.',
     technicalNote: 'Portal en tinte carbón · Luminarias sobrepuestas negro mate',
-    image: '/src/assets/images/story_06_pasillo_wide_1794750911999.jpg',
+    image: '/assets/images/story_06_pasillo_wide_1794750911999.jpg',
     imageAlt: 'Pasillo interior terminado en madera natural con focos negros encendidos',
     aspectHint: 'landscape',
   },
@@ -751,7 +751,7 @@ export const REAL_PROJECT_STORY_SLIDES: RealProjectStorySlide[] = [
     caption:
       'Las luminarias empotradas en el alero bañan la madera y destacan el volumen saliente derecho en medio del bosque costero.',
     technicalNote: 'Iluminación arquitectónica de alero · Termopaneles con luz interior cálida',
-    image: '/src/assets/images/story_08_hora_azul_wide_1794750914449.jpg',
+    image: '/assets/images/story_08_hora_azul_wide_1794750914449.jpg',
     imageAlt: 'Vista real al atardecer de la casa iluminada entre pinos antes del paisajismo',
     aspectHint: 'landscape',
   },
@@ -812,7 +812,7 @@ export const REAL_PROJECT_COMPARISONS: RealProjectComparison[] = [
     aspectClass: 'aspect-[16/10]',
     beforeLabel: 'Inicio de Obra',
     afterLabel: 'Proyecto Terminado',
-    beforeImage: '/src/assets/images/story_01_matwrap_forest_1794752083985.jpg',
+    beforeImage: '/assets/images/story_01_matwrap_forest_1794752083985.jpg',
     afterImage: REAL_BUILT_EXTERIOR_ENHANCED,
     hotspots: [],
   },
