@@ -9,6 +9,8 @@ import {
   useMapsLibrary,
 } from '@vis.gl/react-google-maps';
 import { Crosshair, Loader2, LocateFixed, MapPin, Search } from 'lucide-react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 export interface Coordinates {
   lat: number;
@@ -25,12 +27,382 @@ interface ParcelLocationMapProps {
   onPinChange: (coords: Coordinates, explicit: boolean) => void;
 }
 
-const MAPS_API_KEY =
+const rawApiKey =
   (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined) ||
   (process.env.GOOGLE_MAPS_API_KEY as string | undefined) ||
   '';
 
-function ParcelMapInner({
+const hasValidGoogleMapsKey = Boolean(
+  rawApiKey &&
+    rawApiKey.trim() !== '' &&
+    !rawApiKey.includes('MY_GOOGLE_MAPS_API_KEY')
+);
+
+// -------------------------------------------------------------
+// Free Interactive OpenStreetMap / Esri Satellite Map (Leaflet)
+// -------------------------------------------------------------
+const customMarkerIcon = L.divIcon({
+  className: 'custom-parcel-pin',
+  html: `
+    <div style="position: relative; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: grab;">
+      <div style="position: absolute; width: 26px; height: 26px; background-color: #C49A6C; border: 2px solid #141311; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 4px 10px rgba(0,0,0,0.5);"></div>
+      <div style="position: absolute; width: 9px; height: 9px; background-color: #141311; border-radius: 50%; top: 6px;"></div>
+    </div>
+  `,
+  iconSize: [30, 30],
+  iconAnchor: [15, 28],
+});
+
+function LeafletParcelMap({
+  commune,
+  regionName,
+  sectorQuery,
+  onSectorQueryChange,
+  pinLocation,
+  hasExplicitPin,
+  onPinChange,
+}: ParcelLocationMapProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  const lastGeocodedCommuneRef = useRef<string>('');
+
+  const [mapType, setMapType] = useState<'hybrid' | 'roadmap'>('hybrid');
+  const [searching, setSearching] = useState(false);
+  const [locatingGps, setLocatingGps] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  // Initialize Leaflet map
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const initialLat = pinLocation?.lat ?? -33.4489;
+    const initialLng = pinLocation?.lng ?? -70.6693;
+    const initialZoom = pinLocation ? 14 : 9;
+
+    const map = L.map(containerRef.current, {
+      center: [initialLat, initialLng],
+      zoom: initialZoom,
+      zoomControl: false,
+      attributionControl: false,
+    });
+
+    const tileUrl =
+      mapType === 'hybrid'
+        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+    const tileLayer = L.tileLayer(tileUrl, {
+      maxZoom: 19,
+    }).addTo(map);
+
+    tileLayerRef.current = tileLayer;
+
+    // Add marker if pinLocation already exists
+    if (pinLocation) {
+      const marker = L.marker([pinLocation.lat, pinLocation.lng], {
+        icon: customMarkerIcon,
+        draggable: true,
+      }).addTo(map);
+
+      marker.on('dragend', () => {
+        const pos = marker.getLatLng();
+        onPinChange({ lat: pos.lat, lng: pos.lng }, true);
+      });
+
+      markerRef.current = marker;
+    }
+
+    // Map click to place or move pin
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      setStatusMessage(null);
+      const nextCoords = { lat: e.latlng.lat, lng: e.latlng.lng };
+
+      if (markerRef.current) {
+        markerRef.current.setLatLng(e.latlng);
+      } else {
+        const marker = L.marker(e.latlng, {
+          icon: customMarkerIcon,
+          draggable: true,
+        }).addTo(map);
+
+        marker.on('dragend', () => {
+          const pos = marker.getLatLng();
+          onPinChange({ lat: pos.lat, lng: pos.lng }, true);
+        });
+
+        markerRef.current = marker;
+      }
+
+      onPinChange(nextCoords, true);
+    });
+
+    mapRef.current = map;
+
+    // Ensure map tiles render properly after container layout
+    const resizeTimeout = setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
+
+    return () => {
+      clearTimeout(resizeTimeout);
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // Sync tile layer when switching between Satellite and Roadmap
+  useEffect(() => {
+    if (!tileLayerRef.current) return;
+    const nextUrl =
+      mapType === 'hybrid'
+        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    tileLayerRef.current.setUrl(nextUrl);
+  }, [mapType]);
+
+  // Sync external pinLocation changes with marker position
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (pinLocation) {
+      if (markerRef.current) {
+        const currentPos = markerRef.current.getLatLng();
+        if (
+          Math.abs(currentPos.lat - pinLocation.lat) > 0.00001 ||
+          Math.abs(currentPos.lng - pinLocation.lng) > 0.00001
+        ) {
+          markerRef.current.setLatLng([pinLocation.lat, pinLocation.lng]);
+        }
+      } else {
+        const marker = L.marker([pinLocation.lat, pinLocation.lng], {
+          icon: customMarkerIcon,
+          draggable: true,
+        }).addTo(mapRef.current);
+
+        marker.on('dragend', () => {
+          const pos = marker.getLatLng();
+          onPinChange({ lat: pos.lat, lng: pos.lng }, true);
+        });
+
+        markerRef.current = marker;
+      }
+    }
+  }, [pinLocation, onPinChange]);
+
+  // Search address / sector using OpenStreetMap Nominatim
+  const searchLocationOnMap = async (query: string, zoomLevel: number, markExplicit: boolean) => {
+    setSearching(true);
+    setStatusMessage(null);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          query
+        )}&countrycodes=cl&limit=1`,
+        { headers: { 'Accept-Language': 'es' } }
+      );
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        const nextCoords = { lat, lng };
+
+        if (mapRef.current) {
+          mapRef.current.setView([lat, lng], zoomLevel);
+        }
+
+        if (markerRef.current) {
+          markerRef.current.setLatLng([lat, lng]);
+        } else if (mapRef.current) {
+          const marker = L.marker([lat, lng], {
+            icon: customMarkerIcon,
+            draggable: true,
+          }).addTo(mapRef.current);
+
+          marker.on('dragend', () => {
+            const pos = marker.getLatLng();
+            onPinChange({ lat: pos.lat, lng: pos.lng }, true);
+          });
+          markerRef.current = marker;
+        }
+
+        onPinChange(nextCoords, markExplicit);
+      } else {
+        setStatusMessage('No encontramos esa dirección exacta; haz clic directo en el mapa.');
+      }
+    } catch {
+      setStatusMessage('Puedes mover o hacer clic directamente en el mapa para fijar tu parcela.');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  // Auto-center when commune or region changes
+  useEffect(() => {
+    if (!commune) return;
+    const communeKey = `${commune}|${regionName}`;
+    if (lastGeocodedCommuneRef.current === communeKey) return;
+    lastGeocodedCommuneRef.current = communeKey;
+
+    void searchLocationOnMap(`${commune}, ${regionName}, Chile`, 13, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commune, regionName]);
+
+  const handleSearchSector = () => {
+    const trimmed = sectorQuery.trim();
+    const query = trimmed
+      ? `${trimmed}, ${commune}, ${regionName}, Chile`
+      : `${commune}, ${regionName}, Chile`;
+    void searchLocationOnMap(query, trimmed ? 16 : 13, Boolean(trimmed));
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setStatusMessage('Tu navegador no permite geolocalización automática.');
+      return;
+    }
+    setLocatingGps(true);
+    setStatusMessage(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const nextCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        if (mapRef.current) {
+          mapRef.current.setView([nextCoords.lat, nextCoords.lng], 16);
+        }
+        if (markerRef.current) {
+          markerRef.current.setLatLng([nextCoords.lat, nextCoords.lng]);
+        } else if (mapRef.current) {
+          const marker = L.marker([nextCoords.lat, nextCoords.lng], {
+            icon: customMarkerIcon,
+            draggable: true,
+          }).addTo(mapRef.current);
+
+          marker.on('dragend', () => {
+            const pos = marker.getLatLng();
+            onPinChange({ lat: pos.lat, lng: pos.lng }, true);
+          });
+          markerRef.current = marker;
+        }
+        onPinChange(nextCoords, true);
+        setLocatingGps(false);
+      },
+      () => {
+        setStatusMessage('No pudimos obtener tu GPS. Haz clic directo en el mapa.');
+        setLocatingGps(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
+  return (
+    <div className="space-y-2">
+      {/* Search and GPS controls */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div className="relative flex-1 min-w-0">
+          <input
+            id="sector-detail"
+            type="text"
+            value={sectorQuery}
+            onChange={(e) => onSectorQueryChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSearchSector();
+              }
+            }}
+            placeholder="Dirección, sector o condominio (ej. El Yeco, Chicureo)..."
+            className="w-full pl-3.5 pr-20 py-2 rounded-xl bg-[#141311] border border-white/12 text-xs text-[#F6F4EF] placeholder:text-[#6B645B] focus:outline-none focus:border-[#C49A6C]"
+          />
+          <button
+            type="button"
+            onClick={handleSearchSector}
+            disabled={searching}
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#25221E] hover:bg-[#322D27] border border-white/10 text-[11px] font-medium text-[#DFC8AA] transition-colors cursor-pointer disabled:opacity-60"
+          >
+            {searching ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Search className="w-3 h-3" />
+            )}
+            <span>Ubicar</span>
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleUseCurrentLocation}
+          disabled={locatingGps}
+          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#141311] hover:bg-[#25221E] border border-white/15 text-[11px] font-medium text-[#E5DFD3] transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-60"
+        >
+          {locatingGps ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C49A6C]" />
+          ) : (
+            <LocateFixed className="w-3.5 h-3.5 text-[#C49A6C]" />
+          )}
+          <span>Usar mi GPS</span>
+        </button>
+      </div>
+
+      {/* Map Container */}
+      <div
+        data-lenis-prevent
+        data-lenis-prevent-wheel
+        className="relative w-full h-[205px] sm:h-[195px] lg:h-[clamp(160px,22vh,205px)] rounded-xl overflow-hidden border border-white/15 bg-[#11100E] overscroll-contain"
+      >
+        <div ref={containerRef} className="w-full h-full z-0" />
+
+        {/* Satellite / Map View Toggle */}
+        <div className="absolute top-2.5 left-2.5 z-[1000] inline-flex items-center p-0.5 rounded-lg bg-[#141311]/88 backdrop-blur-md border border-white/15 text-[11px]">
+          <button
+            type="button"
+            onClick={() => setMapType('hybrid')}
+            className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+              mapType === 'hybrid'
+                ? 'bg-[#C49A6C] text-[#141311]'
+                : 'text-[#D6CFC5] hover:text-white'
+            }`}
+          >
+            Satélite
+          </button>
+          <button
+            type="button"
+            onClick={() => setMapType('roadmap')}
+            className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+              mapType === 'roadmap'
+                ? 'bg-[#C49A6C] text-[#141311]'
+                : 'text-[#D6CFC5] hover:text-white'
+            }`}
+          >
+            Mapa
+          </button>
+        </div>
+
+        {/* Bottom Instruction & Exact Coordinate Readout */}
+        <div className="pointer-events-none absolute inset-x-2 bottom-2 z-[1000] flex items-center justify-between gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#141311]/88 backdrop-blur-md border border-white/12 text-[10px] sm:text-[11px] text-[#E6E0D6]">
+          <span className="inline-flex items-center gap-1.5 min-w-0 truncate">
+            <Crosshair className="w-3.5 h-3.5 text-[#C49A6C] shrink-0" />
+            <span className="truncate">
+              {statusMessage ||
+                (hasExplicitPin
+                  ? 'Pin fijado · Arrastra para ajustar'
+                  : 'Toca o arrastra sobre tu parcela')}
+            </span>
+          </span>
+          {pinLocation && (
+            <span className="font-mono-tech text-[10px] text-[#DFC8AA] tabular-nums shrink-0">
+              {pinLocation.lat.toFixed(4)}, {pinLocation.lng.toFixed(4)}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// Google Maps Implementation (used only when valid API key exists)
+// -------------------------------------------------------------
+function GoogleParcelMapInner({
   commune,
   regionName,
   sectorQuery,
@@ -79,23 +451,13 @@ function ParcelMapInner({
       } else {
         setStatusMessage('No encontramos esa dirección exacta; haz clic directo en el mapa.');
       }
-    } catch (err) {
-      const msg = String(err);
-      if (
-        msg.includes('429') ||
-        msg.includes('RESOURCE_EXHAUSTED') ||
-        msg.includes('OVER_QUERY_LIMIT') ||
-        msg.includes('Quota')
-      ) {
-        window.dispatchEvent(new CustomEvent('gmp-quota-exceeded'));
-      }
+    } catch {
       setStatusMessage('Puedes mover o hacer clic directamente en el mapa para fijar tu parcela.');
     } finally {
       setSearching(false);
     }
   };
 
-  // Auto-center when region/commune changes (uses Places API New searchByText)
   useEffect(() => {
     if (!placesLib || !map || !commune) return;
     const communeKey = `${commune}|${regionName}`;
@@ -157,7 +519,6 @@ function ParcelMapInner({
 
   return (
     <div className="space-y-2">
-      {/* Compact Sector Search + GPS Trigger Row */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <div className="relative flex-1 min-w-0">
           <input
@@ -204,7 +565,6 @@ function ParcelMapInner({
         </button>
       </div>
 
-      {/* Interactive Google Map Container with Touch-Friendly Height on Mobile */}
       <div
         ref={mapContainerRef}
         data-lenis-prevent
@@ -214,7 +574,6 @@ function ParcelMapInner({
         <GoogleMap
           className="w-full h-full"
           mapId="DEMO_MAP_ID"
-          internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
           defaultCenter={{ lat: -33.4489, lng: -70.6693 }}
           defaultZoom={9}
           mapTypeId={mapType}
@@ -241,7 +600,6 @@ function ParcelMapInner({
           )}
         </GoogleMap>
 
-        {/* Satellite / Map View Toggle */}
         <div className="absolute top-2.5 left-2.5 z-10 inline-flex items-center p-0.5 rounded-lg bg-[#141311]/88 backdrop-blur-md border border-white/15 text-[11px]">
           <button
             type="button"
@@ -267,7 +625,6 @@ function ParcelMapInner({
           </button>
         </div>
 
-        {/* Bottom Instruction & Exact Coordinate Readout */}
         <div className="pointer-events-none absolute inset-x-2 bottom-2 z-10 flex items-center justify-between gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#141311]/88 backdrop-blur-md border border-white/12 text-[10px] sm:text-[11px] text-[#E6E0D6]">
           <span className="inline-flex items-center gap-1.5 min-w-0 truncate">
             <Crosshair className="w-3.5 h-3.5 text-[#C49A6C] shrink-0" />
@@ -289,37 +646,22 @@ function ParcelMapInner({
   );
 }
 
+// -------------------------------------------------------------
+// Main Export: seamlessly chooses Google Maps (if valid key) or Leaflet
+// -------------------------------------------------------------
 export default function ParcelLocationMap(props: ParcelLocationMapProps) {
-  if (!MAPS_API_KEY) {
+  if (hasValidGoogleMapsKey) {
     return (
-      <div className="space-y-2">
-        <input
-          id="sector-detail"
-          type="text"
-          value={props.sectorQuery}
-          onChange={(e) => props.onSectorQueryChange(e.target.value)}
-          placeholder="Dirección, sector o condominio exacto (ej. El Yeco, Mirasol, Chicureo)..."
-          className="w-full px-3.5 py-2.5 rounded-xl bg-[#141311] border border-white/12 text-xs text-[#F6F4EF] placeholder:text-[#6B645B] focus:outline-none focus:border-[#C49A6C]"
-        />
-        <div className="rounded-xl border border-white/12 bg-[#141311] px-4 py-3 flex items-center gap-2.5 text-xs text-[#968E83]">
-          <MapPin className="w-4 h-4 text-[#C49A6C] shrink-0" />
-          <span>
-            El mapa interactivo de Google Maps cargará aquí en cuanto la clave esté disponible en
-            el entorno de ejecución.
-          </span>
-        </div>
-      </div>
+      <APIProvider
+        apiKey={rawApiKey}
+        language="es"
+        region="CL"
+        libraries={['marker', 'places']}
+      >
+        <GoogleParcelMapInner {...props} />
+      </APIProvider>
     );
   }
 
-  return (
-    <APIProvider
-      apiKey={MAPS_API_KEY}
-      language="es"
-      region="CL"
-      libraries={['marker', 'places']}
-    >
-      <ParcelMapInner {...props} />
-    </APIProvider>
-  );
+  return <LeafletParcelMap {...props} />;
 }
